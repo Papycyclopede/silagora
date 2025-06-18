@@ -1,7 +1,15 @@
 PODS:
   - boost (1.84.0)
   - DoubleConversion (1.1.6)
+  - EASClient (0.14.3):
+    - ExpoModulesCore
+  - EXAV (15.1.6):
+    - ExpoModulesCore
+    - ReactCommon/turbomodule/core
   - EXConstants (17.1.6):
+    - ExpoModulesCore
+  - EXJSONUtils (0.15.0)
+  - EXManifests (0.16.5):
     - ExpoModulesCore
   - Expo (53.0.11):
     - DoubleConversion
@@ -34,17 +42,17 @@ PODS:
     - ExpoModulesCore
   - ExpoBlur (14.1.5):
     - ExpoModulesCore
-  - ExpoCamera (16.1.7):
+  - ExpoCamera (16.1.8):
     - ExpoModulesCore
     - ZXingObjC/OneD
     - ZXingObjC/PDF417
   - ExpoFileSystem (18.1.10):
     - ExpoModulesCore
-  - ExpoFont (13.2.2):
+  - ExpoFont (13.3.1):
     - ExpoModulesCore
   - ExpoHaptics (14.1.4):
     - ExpoModulesCore
-  - ExpoHead (3.5.24):
+  - ExpoHead (5.0.7):
     - ExpoModulesCore
   - ExpoKeepAwake (14.1.4):
     - ExpoModulesCore
@@ -79,6 +87,8 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - ExpoSecureStore (13.0.2):
+    - ExpoModulesCore
   - ExpoSplashScreen (0.30.9):
     - ExpoModulesCore
   - ExpoSymbols (0.4.5):
@@ -87,10 +97,50 @@ PODS:
     - ExpoModulesCore
   - ExpoWebBrowser (14.1.6):
     - ExpoModulesCore
+  - EXStructuredHeaders (4.1.0)
+  - EXUpdates (0.28.14):
+    - DoubleConversion
+    - EASClient
+    - EXManifests
+    - ExpoModulesCore
+    - EXStructuredHeaders
+    - EXUpdatesInterface
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - ReachabilitySwift
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
+  - EXUpdatesInterface (1.1.0):
+    - ExpoModulesCore
   - fast_float (6.1.4)
   - FBLazyVector (0.79.3)
   - fmt (11.0.2)
   - glog (0.3.5)
+  - Google-Maps-iOS-Utils (5.0.0):
+    - GoogleMaps (~> 8.0)
+  - GoogleMaps (8.4.0):
+    - GoogleMaps/Maps (= 8.4.0)
+  - GoogleMaps/Base (8.4.0)
+  - GoogleMaps/Maps (8.4.0):
+    - GoogleMaps/Base
   - hermes-engine (0.79.3):
     - hermes-engine/Pre-built (= 0.79.3)
   - hermes-engine/Pre-built (0.79.3)
@@ -119,6 +169,7 @@ PODS:
     - FBLazyVector (= 0.79.3)
     - RCTRequired (= 0.79.3)
     - React-Core (= 0.79.3)
+  - ReachabilitySwift (5.2.4)
   - React (0.79.3):
     - React-Core (= 0.79.3)
     - React-Core/DevSupport (= 0.79.3)
@@ -1418,6 +1469,12 @@ PODS:
     - React-jsiexecutor
     - React-RCTFBReactNativeSpec
     - ReactCommon/turbomodule/core
+  - react-native-google-maps (1.20.1):
+    - Google-Maps-iOS-Utils (= 5.0.0)
+    - GoogleMaps (= 8.4.0)
+    - React-Core
+  - react-native-maps (1.20.1):
+    - React-Core
   - react-native-safe-area-context (5.4.0):
     - DoubleConversion
     - glog
@@ -1839,7 +1896,31 @@ PODS:
     - React-logger (= 0.79.3)
     - React-perflogger (= 0.79.3)
     - React-utils (= 0.79.3)
-  - RNCAsyncStorage (1.24.0):
+  - RNCAsyncStorage (2.1.2):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.11.18.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
+  - RNCPicker (2.11.0):
     - DoubleConversion
     - glog
     - hermes-engine
@@ -2122,7 +2203,11 @@ PODS:
 DEPENDENCIES:
   - boost (from `../node_modules/react-native/third-party-podspecs/boost.podspec`)
   - DoubleConversion (from `../node_modules/react-native/third-party-podspecs/DoubleConversion.podspec`)
+  - EASClient (from `../node_modules/expo-eas-client/ios`)
+  - EXAV (from `../node_modules/expo-av/ios`)
   - EXConstants (from `../node_modules/expo-constants/ios`)
+  - EXJSONUtils (from `../node_modules/expo-json-utils/ios`)
+  - EXManifests (from `../node_modules/expo-manifests/ios`)
   - Expo (from `../node_modules/expo`)
   - ExpoAsset (from `../node_modules/expo-asset/ios`)
   - ExpoBlur (from `../node_modules/expo-blur/ios`)
@@ -2136,10 +2221,14 @@ DEPENDENCIES:
   - ExpoLinking (from `../node_modules/expo-linking/ios`)
   - ExpoLocation (from `../node_modules/expo-location/ios`)
   - ExpoModulesCore (from `../node_modules/expo-modules-core`)
+  - ExpoSecureStore (from `../node_modules/expo-secure-store/ios`)
   - ExpoSplashScreen (from `../node_modules/expo-splash-screen/ios`)
   - ExpoSymbols (from `../node_modules/expo-symbols/ios`)
   - ExpoSystemUI (from `../node_modules/expo-system-ui/ios`)
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
+  - EXStructuredHeaders (from `../node_modules/expo-structured-headers/ios`)
+  - EXUpdates (from `../node_modules/expo-updates/ios`)
+  - EXUpdatesInterface (from `../node_modules/expo-updates-interface/ios`)
   - fast_float (from `../node_modules/react-native/third-party-podspecs/fast_float.podspec`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - fmt (from `../node_modules/react-native/third-party-podspecs/fmt.podspec`)
@@ -2178,6 +2267,8 @@ DEPENDENCIES:
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
+  - react-native-google-maps (from `/Users/alexandresanchez/Desktop/silagora/node_modules/react-native-maps`)
+  - react-native-maps (from `../node_modules/react-native-maps`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-webview (from `../node_modules/react-native-webview`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
@@ -2212,6 +2303,7 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
+  - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
@@ -2220,6 +2312,9 @@ DEPENDENCIES:
 
 SPEC REPOS:
   trunk:
+    - Google-Maps-iOS-Utils
+    - GoogleMaps
+    - ReachabilitySwift
     - SocketRocket
     - ZXingObjC
 
@@ -2228,8 +2323,16 @@ EXTERNAL SOURCES:
     :podspec: "../node_modules/react-native/third-party-podspecs/boost.podspec"
   DoubleConversion:
     :podspec: "../node_modules/react-native/third-party-podspecs/DoubleConversion.podspec"
+  EASClient:
+    :path: "../node_modules/expo-eas-client/ios"
+  EXAV:
+    :path: "../node_modules/expo-av/ios"
   EXConstants:
     :path: "../node_modules/expo-constants/ios"
+  EXJSONUtils:
+    :path: "../node_modules/expo-json-utils/ios"
+  EXManifests:
+    :path: "../node_modules/expo-manifests/ios"
   Expo:
     :path: "../node_modules/expo"
   ExpoAsset:
@@ -2256,6 +2359,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-location/ios"
   ExpoModulesCore:
     :path: "../node_modules/expo-modules-core"
+  ExpoSecureStore:
+    :path: "../node_modules/expo-secure-store/ios"
   ExpoSplashScreen:
     :path: "../node_modules/expo-splash-screen/ios"
   ExpoSymbols:
@@ -2264,6 +2369,12 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-system-ui/ios"
   ExpoWebBrowser:
     :path: "../node_modules/expo-web-browser/ios"
+  EXStructuredHeaders:
+    :path: "../node_modules/expo-structured-headers/ios"
+  EXUpdates:
+    :path: "../node_modules/expo-updates/ios"
+  EXUpdatesInterface:
+    :path: "../node_modules/expo-updates-interface/ios"
   fast_float:
     :podspec: "../node_modules/react-native/third-party-podspecs/fast_float.podspec"
   FBLazyVector:
@@ -2337,6 +2448,10 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
+  react-native-google-maps:
+    :path: "/Users/alexandresanchez/Desktop/silagora/node_modules/react-native-maps"
+  react-native-maps:
+    :path: "../node_modules/react-native-maps"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
   react-native-webview:
@@ -2405,6 +2520,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   RNCAsyncStorage:
     :path: "../node_modules/@react-native-async-storage/async-storage"
+  RNCPicker:
+    :path: "../node_modules/@react-native-picker/picker"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
   RNReanimated:
@@ -2419,33 +2536,44 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   boost: 7e761d76ca2ce687f7cc98e698152abd03a18f90
   DoubleConversion: cb417026b2400c8f53ae97020b2be961b59470cb
+  EASClient: 961c6b0118bed52023fd2c129d41cbca212d60c4
+  EXAV: 3fff236999a5a5c0f9b251d1a902908e4c844199
   EXConstants: 9f310f44bfedba09087042756802040e464323c0
+  EXJSONUtils: 1d3e4590438c3ee593684186007028a14b3686cd
+  EXManifests: 951161dd9a63523c4eef0fa2a7476639a7ba230d
   Expo: 4e8bda07d30b024b1732f87843a5349a3ecc1316
   ExpoAsset: 3bc9adb7dbbf27ae82c18ca97eb988a3ae7e73b1
   ExpoBlur: 3c8885b9bf9eef4309041ec87adec48b5f1986a9
-  ExpoCamera: cf514024461c52b2e54af9232766d70fed45cb3b
+  ExpoCamera: 1667b34b8ba4b8015561808e38dd0a281a29da1b
   ExpoFileSystem: c36eb8155eb2381c83dda7dc210e3eec332368b6
-  ExpoFont: ab96f88d5e959232152c8dcecafd8ba1235c5763
+  ExpoFont: abbb91a911eb961652c2b0a22eef801860425ed6
   ExpoHaptics: 0ff6e0d83cd891178a306e548da1450249d54500
-  ExpoHead: 1a1b30c6c1d125e9b8a199ca305c16a1dc041624
+  ExpoHead: af044f3e9c99e7d8d21bf653b4c2f2ef53a7f082
   ExpoKeepAwake: bf0811570c8da182bfb879169437d4de298376e7
   ExpoLinearGradient: 7734c8059972fcf691fb4330bcdf3390960a152d
   ExpoLinking: b85ff4eafeae6fc638c6cace60007ae521af0ef4
   ExpoLocation: a319a1b2c00b82c29e8a24227e0f00d1e19662c5
   ExpoModulesCore: d431ffe83c8673d02cb38425594a5f5480fd3061
+  ExpoSecureStore: 6506992a9f53c94ea716c54d4a63144965945c2c
   ExpoSplashScreen: 03ef991c0f9575a10269e08083cb4bd10e0989bc
   ExpoSymbols: c5612a90fb9179cdaebcd19bea9d8c69e5d3b859
   ExpoSystemUI: 29fb31c0e06eea3f5d88299d5c290101fc69f61f
   ExpoWebBrowser: 06fb5f767f53ad53944b068cdd207984cb998712
+  EXStructuredHeaders: 32bec6771c2db18c4cd47cecae530d1d06cdf972
+  EXUpdates: 4e33dbdae469db02c9d152dffe24923df7af0c65
+  EXUpdatesInterface: 7ff005b7af94ee63fa452ea7bb95d7a8ff40277a
   fast_float: 06eeec4fe712a76acc9376682e4808b05ce978b6
   FBLazyVector: a62a7a5760929b6265e27bc01ab7598dde93ebd3
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
+  Google-Maps-iOS-Utils: 66d6de12be1ce6d3742a54661e7a79cb317a9321
+  GoogleMaps: 8939898920281c649150e0af74aa291c60f2e77d
   hermes-engine: 94ed01537bdeccaab1adbf94b040d115d6fa1a7f
   RCT-Folly: e78785aa9ba2ed998ea4151e314036f6c49e6d82
   RCTDeprecation: c3e3f5b4ea83e7ff3bc86ce09e2a54b7affd687d
   RCTRequired: ee438439880dffc9425930d1dd1a3c883ee6879c
   RCTTypeSafety: fe728195791e1a0222aa83596a570cf377cd475e
+  ReachabilitySwift: 32793e867593cfc1177f5d16491e3a197d2fccda
   React: 114ee161feb204412580928b743e6716aebac987
   React-callinvoker: d175cf3640a993f6cd960044a7657543157f0ba9
   React-Core: cd487c9eeb125c902242bcc76ced12e14adf4ea4
@@ -2473,6 +2601,8 @@ SPEC CHECKSUMS:
   React-logger: 514fac028fee60c84591f951c7c04ba1c5023334
   React-Mapbuffer: fae8da2c01aeb7f26ad739731b6dba61fd02fd97
   React-microtasksnativemodule: 20454ffccff553f0ee73fd20873aa8555a5867fb
+  react-native-google-maps: c4f5c5b2dda17e7cb2cb2b37a81f140b039b3e7e
+  react-native-maps: 9febd31278b35cd21e4fad2cf6fa708993be5dab
   react-native-safe-area-context: 562163222d999b79a51577eda2ea8ad2c32b4d06
   react-native-webview: 520bcb79c3f2af91e157cdd695732a34ab5f25c8
   React-NativeModulesApple: 65b2735133d6ce8a3cb5f23215ef85e427b0139c
@@ -2506,7 +2636,8 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: e6d0c3c3cc9862a3ccef0c252835cd7ccb96313d
   ReactCodegen: c2f2ec5dd32215237420bedebae0e66867e1e8ea
   ReactCommon: e243aa261effc83c10208f0794bade55ca9ae5b6
-  RNCAsyncStorage: 7c077de553127336f479393dba37e86d6c929db8
+  RNCAsyncStorage: 39c42c1e478e1f5166d1db52b5055e090e85ad66
+  RNCPicker: e51a9eb07c7dfbfba3d6c6cc567e083376c717cc
   RNGestureHandler: 7d0931a61d7ba0259f32db0ba7d0963c3ed15d2b
   RNReanimated: 2313402fe27fecb7237619e9c6fcee3177f08a65
   RNScreens: 482e9707f9826230810c92e765751af53826d509
@@ -2515,6 +2646,6 @@ SPEC CHECKSUMS:
   Yoga: 29f74a5b77dca8c37669e1e1e867e5f4e12407df
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
-PODFILE CHECKSUM: 41f74b3f8b52adc4a4b4cb6efb54bbb4b7722241
+PODFILE CHECKSUM: 1ed1c957dc5e3b1cbde53e1e0e0bde40a860fe47
 
 COCOAPODS: 1.16.2

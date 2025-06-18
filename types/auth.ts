@@ -1,5 +1,7 @@
 // types/auth.ts
 
+export type ModerationLevel = 'new' | 'trusted' | 'suspended';
+
 export interface User {
   id: string;
   email?: string;
@@ -14,6 +16,11 @@ export interface User {
   unlimitedTickets?: boolean;
   ticketCount?: number;
   premiumUsageCredits?: number;
+  moderationScore?: number;
+  moderationLevel?: ModerationLevel;
+  
+  // CORRECTION: On utilise une convention de nommage cohérente (camelCase)
+  ownedBackgrounds?: string[];
 }
 
 export interface AuthState {
@@ -21,15 +28,6 @@ export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-}
-
-// L'interface OTPVerification doit avoir 'contact' et 'type' comme 'string' car ils sont toujours présents
-export interface OTPVerification {
-  code: string;
-  contact: string; 
-  type: 'email' | 'phone'; 
-  expiresAt: Date;
-  attempts: number;
 }
 
 export interface CreateAccountData {

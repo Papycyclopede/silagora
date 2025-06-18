@@ -1,8 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// --- Clé de stockage ---
+const STORAGE_KEY = '@silagora:language';
+
+// --- Ressources de traduction ---
 const resources = {
   fr: {
     translation: {
@@ -16,8 +20,8 @@ const resources = {
         sections_tickets: 'Tickets et crédits',
         ethics_title: "Notre éthique",
         ethics_text: "Aucune incitation, pas d’abonnement, achats éthiques uniquement pour enrichir votre expérience.",
-        legal_title: "Informations légales",
-        legal_text: "Les achats sont valables uniquement sur cet appareil. Aucune donnée n’est revendue.",
+        legal_title: "Conditions Générales de Vente (Simulées)",
+        legal_text: "Préambule : Cette boutique est présentée dans le cadre d'un projet de démonstration. Tous les achats sont simulés et aucune transaction financière réelle n'est effectuée.\n\n1. Objet : Les articles présentés (fonds d'écran, tickets) sont des biens numériques à usage exclusif au sein de l'application Silagora.\n\n2. Processus d'achat : La sélection d'un article et la confirmation de l'achat déclenchent une simulation de transaction. Aucun paiement réel ne sera demandé ou traité.\n\n3. Prix : Les prix affichés sont purement indicatifs et à des fins de démonstration.\n\n4. Droit de rétractation : Compte tenu de la nature numérique des articles et du caractère simulé des transactions, l'utilisateur reconnaît qu'aucun droit de rétractation ne s'applique.\n\n5. Utilisation : Les articles obtenus sont liés au compte utilisateur sur l'appareil et ne sont ni transférables, ni échangeables, ni remboursables.\n\n6. Protection des données : Conformément à notre éthique, aucune donnée personnelle ou liée aux achats simulés n'est collectée à des fins commerciales ou partagée avec des tiers.",
         login_prompt_title: "Créer un compte pour acheter",
         login_prompt_text: "Connectez-vous pour profiter des achats premium.",
         login_prompt_button: "Créer un compte",
@@ -35,6 +39,13 @@ const resources = {
         item_alert_purchase_success_cta: "Continuer",
         item_alert_error_title: "Erreur",
         item_alert_error_text: "Impossible de finaliser l’achat. Réessayez plus tard.",
+        item_alert_use_credit_title: "Utiliser un crédit ?",
+        item_alert_use_credit_message: "Vous pouvez utiliser 1 crédit premium pour ce fond. Il vous en restera {{count}}.",
+        item_alert_use_credit_cta: "Utiliser 1 crédit",
+        item_alert_credit_used_title: "Crédit utilisé !",
+        item_alert_credit_used_message: "Le fond \"{{name}}\" a été appliqué.",
+        item_alert_premium_required_title: "Crédit Premium Requis",
+        item_alert_premium_required_message: "Trouvez des tickets suspendus sur la carte pour gagner des crédits et utiliser des fonds premium.",
         items: {
           ticket_pack_5: {
             name: "Pack de 5 tickets",
@@ -72,9 +83,50 @@ const resources = {
             benefit2: "Idéal pour messages doux",
             benefit3: "Limité dans le temps",
           },
+          background_aquabolt: {
+            name: "Aqua Bolt",
+            description: "Une icône bleue et vibrante, comme une goutte d'eau.",
+            benefit1: "Style moderne et épuré",
+            benefit2: "Symbole de clarté",
+            benefit3: "Exclusivité du Hackathon",
+          },
+          background_cityscape: {
+            name: "Cité Bleutée",
+            description: "Une métropole paisible peinte à l'aquarelle.",
+            benefit1: "Ambiance urbaine et sereine",
+            benefit2: "Idéal pour les réflexions citadines",
+            benefit3: "Une touche d'architecture",
+          },
+          background_clouds: {
+            name: "Ciel de Coton",
+            description: "Des nuages doux et rêveurs dans un ciel d'été.",
+            benefit1: "Légèreté et rêverie",
+            benefit2: "Pour des messages aériens",
+            benefit3: "Un classique intemporel",
+          },
+          background_contemporary: {
+            name: "Art Contemporain",
+            description: "Formes géométriques et couleurs chaudes.",
+            benefit1: "Esthétique audacieuse",
+            benefit2: "Pour des pensées structurées",
+            benefit3: "Exprimez votre modernité",
+          },
+          background_neobolt: {
+            name: "Néo Bolt",
+            description: "Un circuit imprimé futuriste et énigmatique.",
+            benefit1: "Look technologique",
+            benefit2: "Pour les messages connectés",
+            benefit3: "Exclusivité du Hackathon",
+          },
+          background_streetart: {
+            name: "Corbeau Urbain",
+            description: "Une touche de street art pour vos messages.",
+            benefit1: "Style urbain et coloré",
+            benefit2: "Pour des souffles rebelles",
+            benefit3: "Une œuvre d'art éphémère",
+          },
         },
       },
-
       // ----------- Navigation & Tabs -----------
       tabs: {
         map: 'Carte',
@@ -83,7 +135,6 @@ const resources = {
         about: 'À propos',
         settings: 'Paramètres',
       },
-
       // ----------- Main Map Screen -----------
       title: 'Silagora',
       subtitle: '"Un message déposé en ce lieu ne pourra être lu que par ceux qui fouleront ce même sol"',
@@ -108,7 +159,6 @@ const resources = {
       clear: 'Nettoyer',
       mapCleared: 'Carte nettoyée',
       mapClearedMessage: 'Les souffles simulés ont été effacés.',
-      
       souffleRevealedTitle: 'Souffle révélé ! ✨',
       souffleRevealedMessage: 'Un nouveau message s\'épanouit sous vos pas...',
       prepareContemplativeSpace: 'Préparation de votre espace contemplatif',
@@ -130,76 +180,46 @@ const resources = {
       locationPermissionDeniedTitle: 'Permission de localisation refusée',
       locationPermissionDeniedMessage: 'La permission de localisation est refusée en permanence. Veuillez l\'activer manuellement dans les paramètres de votre appareil.',
       openSettings: 'Ouvrir les paramètres',
-
       // ----------- Souffle Modal (composer un souffle) -----------
-      depositBreath: 'Composer un souffle',
-      leaveYourTrace: 'Laissez votre trace en ce lieu',
-      anonymousMode: 'Mode anonyme',
-      anonymousDepositText: 'Votre souffle sera déposé de manière anonyme. Il flottera librement, sans être lié à une identité.',
-      breathPlaceholder: 'Que souhaitez-vous murmurer à ce lieu ?',
-      charactersRemaining_one: '{{count}} caractère restant',
-      charactersRemaining_other: '{{count}} caractères restants',
-      chosenOrnament: 'Ornement choisi :',
-      addSticker: 'Ajouter un ornement',
-      hideStickers: 'Masquer les ornements',
-      emotionsCategory: 'Émotions',
-      natureCategory: 'Nature',
-      objectsCategory: 'Objets',
-      symbolsCategory: 'Symboles',
-      premiumOrnamentsNote: '✨ Trouvez des tickets suspendus sur la carte pour débloquer les ornements premium !',
-      breathDuration: 'Durée de vie du souffle',
-      hours24: '24 heures',
-      hours48: '48 heures',
-      locationAnchorText: 'Votre souffle sera ancré à ce lieu précis, comme une empreinte invisible',
-      poeticQuoteSouffle: 'Un souffle déposé ici ne pourra être révélé que par ceux qui fouleront ce même sol, créant une rencontre fortuite entre âmes errantes.',
-      depositHere: 'Déposer délicatement',
-      depositing: 'Dépôt en cours...',
-      breathDeposited: 'Souffle déposé',
-      breathDepositedMessage: 'Votre souffle a été délicatement déposé en ce lieu. Il flottera maintenant dans l\'attente d\'être découvert.',
-
-      // ----------- Dashboard -----------
-      dashboard: {
-        title: 'Tableau de bord',
-        subtitle: 'Vos statistiques personnelles',
-        welcome: 'Bonjour, {{pseudo}} 🌸',
-        anonymous: {
-          title: 'Créez un compte pour voir vos statistiques',
-          text: 'Découvrez votre empreinte poétique sur le territoire, vos achievements et votre progression.',
-        },
-        stats: {
-          created: 'Souffles créés',
-          createdSubtitle: 'Vos traces déposées',
-          revealed: 'Souffles révélés',
-          revealedSubtitle: 'Découvertes faites',
-          distance: 'Distance parcourue',
-          distanceSubtitle: 'En explorant',
-          activeDays: 'Jours actifs',
-          activeDaysSubtitle: 'Depuis le début',
-        },
-        emotion: {
-          title: 'Votre émotion signature',
-          subtitle: 'L\'émotion que vous exprimez le plus souvent',
-        },
-        weeklyActivity: {
-          title: 'Activité de la semaine',
-        },
-        achievements: {
-          title: 'Achievements',
-          subtitle: 'Débloquez des récompenses en explorant Silagora',
-          achievementUnlocked: 'Débloqué',
-        },
-        advancedStats: {
-          title: 'Statistiques avancées',
-          streak: 'Plus longue série',
-          streakUnit_one: '{{count}} jour',
-          streakUnit_other: '{{count}} jours',
-          places: 'Lieux visités',
-          achievementsCount: 'Achievements',
-        },
+      composeSouffle: {
+        title: 'Composer un souffle',
+        subtitle: 'Laissez votre trace en ce lieu',
+        anonymousMode: 'Mode anonyme',
+        anonymousDepositText: 'Votre souffle sera déposé de manière anonyme. Il flottera librement, sans être lié à une identité.',
+        howDoYouFeel: '🧭 Comment vous sentez-vous ?',
+        emotionHint: 'Votre émotion accompagnera discrètement votre souffle',
+        chooseEmotion: 'Choisir une émotion...',
+        selectedOrnament: 'Ornement choisi :',
+        addOrnament: 'Ajouter un ornement',
+        hideOrnaments: 'Masquer les ornements',
+        emotionsCategory: 'Émotions',
+        natureCategory: 'Nature',
+        objectsCategory: 'Objets',
+        symbolsCategory: 'Symboles',
+        premiumOrnamentsNote: '✨ Trouvez des tickets suspendus sur la carte pour débloquer les ornements premium !',
+        messagePlaceholder: 'Que souhaitez-vous murmurer à ce lieu ?',
+        charactersRemaining_one: '{{count}} caractère restant',
+        charactersRemaining_other: '{{count}} caractères restants',
+        souffleBackground: 'Fond du Souffle',
+        backgroundHint: 'Utilisez vos crédits gagnés pour débloquer les fonds premium.',
+        lifespan: 'Durée de vie du souffle',
+        hours24: '24 heures',
+        hours48: '48 heures',
+        locationAnchorText: 'Votre souffle sera ancré à ce lieu précis, comme une empreinte invisible',
+        poeticQuote: 'Un souffle déposé ici ne pourra être révélé que par ceux qui fouleront ce même sol, créant une rencontre fortuite entre âmes errantes.',
+        depositGently: 'Déposer délicatement',
+        depositing: 'Dépôt en cours...',
+        positionUnavailable: 'Position non disponible',
+        souffleDeposited: 'Souffle déposé',
+        souffleDepositedMessage: 'Votre souffle a été délicatement déposé en ce lieu.',
+        wonderful: 'Merveilleux',
+        unexpectedError: 'Une erreur inattendue est survenue',
+        understood: 'Compris',
+        chooseEmotionModalTitle: 'Choisir une émotion',
       },
-
       // ----------- Emotions -----------
       emotions: {
+        '': 'Choisir une émotion...',
         joyeux: 'Joyeux(se)',
         triste: 'Triste',
         colere: 'En colère',
@@ -216,7 +236,6 @@ const resources = {
         emu: 'Ému(e)',
         honteux: 'Honteux(se)',
       },
-
       // ----------- Moderation -----------
       moderation: {
         title: 'Modération Citoyenne',
@@ -231,14 +250,61 @@ const resources = {
         rejectedConfirmation: 'Souffle rejeté et masqué.',
         notAuthorizedTitle: 'Accès non autorisé',
         notAuthorizedText: 'La modération est réservée aux utilisateurs avec un compte premium.',
-        emptyQueue: 'File de modération vide',
-        emptyQueueSubtext: 'Aucun souffle signalé en attente de révision pour le moment. Tout est calme !',
+        emptyQueue: 'Aucun souffle à modérer',
+        emptyQueueSubtext: 'Tout est en ordre pour le moment. Revenez plus tard !',
         refresh: 'Rafraîchir',
         souffleId: 'ID du souffle',
         approve: 'Approuver',
         reject: 'Rejeter',
+        votesCount: '{{count}} vote(s) déjà exprimé(s)',
+        votesNeededText_one: '{{count}} vote restant pour une décision',
+        votesNeededText_other: '{{count}} votes restants pour une décision',
+        blockedMessageTitle: 'Message bloqué',
+        blockedMessage: 'Votre souffle n\'a pas pu être déposé pour la ou les raison(s) suivante(s) :\n- {{reasons}}',
+        contentModifiedTitle: 'Contenu modifié',
+        contentModifiedMessage: 'Certains mots de votre souffle ont été masqués pour respecter les règles de la communauté.',
+        reasons: {
+          'Partage d\'URL non autorisé.': 'Partage d\'URL non autorisé.',
+          'Partage d\\\'informations personnelles (email/téléphone).': 'Partage d\'informations personnelles (email/téléphone).',
+          'Contenu inapproprié détecté': 'Contenu inapproprié détecté',
+          'Contenu suspect détecté': 'Contenu suspect détecté',
+          'Usage excessif de majuscules.': 'Usage excessif de majuscules.',
+          'Répétition excessive de caractères.': 'Répétition excessive de caractères.',
+          'Signalement manuel': 'Signalement manuel'
+        }
       },
-
+      // ----------- Dashboard -----------
+      dashboard: {
+        title: 'Tableau de bord',
+        subtitle: 'Votre voyage en un coup d\'œil',
+        welcome: 'Bienvenue, {{pseudo}} !',
+        stats: {
+          created: 'Souffles créés',
+          createdSubtitle: 'messages écrits',
+          revealed: 'Souffles révélés',
+          revealedSubtitle: 'secrets découverts',
+          activeDays: 'Jours actifs',
+          activeDaysSubtitle: 'jours d\'exploration',
+          places: 'Lieux visités',
+          placesSubtitle: 'endroits explorés',
+        },
+        emotion: {
+          title: 'Votre émotion dominante',
+          subtitle: 'Celle qui résonne le plus dans vos souffles',
+        },
+        weeklyActivity: {
+          title: 'Activité hebdomadaire',
+        },
+        achievements: {
+          title: 'Vos Succès',
+          subtitle: 'Les étapes de votre parcours',
+          achievementUnlocked: 'Succès débloqué !',
+        },
+        anonymous: {
+          title: 'Connectez-vous pour voir vos statistiques',
+          text: 'Créez un compte pour suivre vos progrès, débloquer des succès et personnaliser votre expérience.',
+        },
+      },
       // ----------- Settings -----------
       settings: {
         audio: {
@@ -327,8 +393,17 @@ const resources = {
         moderationParticipationNote: 'Votre participation est volontaire et contribue à un espace plus sûr pour tous.',
         understood: 'Compris',
         shop: 'Boutique',
+        demoMode: {
+          title: "Mode Démo (Jury)",
+          subtitle: "Basculer entre le mode anonyme et le compte développeur.",
+          enable: "Activer le Mode Démo",
+          disable: "Désactiver le Mode Démo",
+          alertEnabledTitle: "Mode Démo activé",
+          alertEnabledMessage: "Le compte développeur est maintenant actif avec tous les privilèges.",
+          alertDisabledTitle: "Mode Démo désactivé",
+          alertDisabledMessage: "Vous êtes maintenant en mode anonyme."
+        }
       },
-
       // ----------- About -----------
       about: {
         title: 'À propos de Silagora',
@@ -376,7 +451,6 @@ const resources = {
         version: 'Version {{version}}',
         hackathonCredit: 'Fait avec 💙 pour le Hackathon Bolt • Juin 2025',
       },
-
       // SECTION COMMUNE AJOUTÉE
       common: {
         tooFarToRevealTitle: "Trop Loin pour Révéler",
@@ -389,37 +463,23 @@ const resources = {
         ticketsExhausted: "Plus de tickets",
         visitShopForMoreTickets: "Visitez la boutique pour obtenir plus de tickets.",
         functionalityReserved: "Fonctionnalité réservée",
-        accountRequiredForDistantReveal: "La révélation à distance requiert un compte pour gérer vos tickets."
+        accountRequiredForDistantReveal: "La révélation à distance requiert un compte pour gérer vos tickets.",
+        giftClaimedTitle: "Cadeau Réclamé !",
+        giftClaimedMessage: "Un crédit premium a été ajouté à votre compte. Utilisez-le pour obtenir des ornements exclusifs !",
+        connectionRequiredTitle: "Connexion requise",
+        connectionRequiredMessage: "Vous devez avoir un compte pour réclamer des cadeaux.",
+        tooFarGiftTitle: "Trop loin",
+        tooFarGiftMessage: "Approchez-vous de ce cadeau pour le réclamer.",
       },
-
       // ----------- Achievements -----------
       achievements: {
-        first_souffle: {
-          title: 'Premier Souffle',
-          description: 'Déposer votre premier souffle',
-        },
-        explorer: {
-          title: 'Explorateur',
-          description: 'Révéler 10 souffles',
-        },
-        poet: {
-          title: 'Poète Urbain',
-          description: 'Créer 25 souffles',
-        },
-        wanderer: {
-          title: 'Vagabond',
-          description: 'Parcourir 10 km en explorant',
-        },
-        consistent: {
-          title: 'Régulier',
-          description: 'Utiliser Silagora 7 jours consécutifs',
-        },
-        social: {
-          title: 'Connecteur',
-          description: 'Révéler des souffles dans 5 lieux différents',
-        },
+        first_souffle: { title: 'Premier Souffle', description: 'Déposer votre premier souffle' },
+        explorer: { title: 'Explorateur', description: 'Révéler 10 souffles' },
+        poet: { title: 'Poète Urbain', description: 'Créer 25 souffles' },
+        wanderer: { title: 'Vagabond', description: 'Parcourir 10 km en explorant' },
+        consistent: { title: 'Régulier', description: 'Utiliser Silagora 7 jours consécutifs' },
+        social: { title: 'Connecteur', description: 'Révéler des souffles dans 5 lieux différents' },
       },
-
       // ----------- Master Login -----------
       masterLogin: {
         title: 'Accès Maître',
@@ -458,7 +518,6 @@ const resources = {
           text: 'Se connecter en tant que Maître',
         },
       },
-      
       // ----------- Complete Profile -----------
       completeProfileTitle: 'Finaliser le profil',
       completeProfileSubtitle: 'Dernière étape avant l\'envol',
@@ -493,7 +552,6 @@ const resources = {
       finalizingProfile: 'Finalisation...',
       completeProfileButton: 'Finaliser le profil',
       skipStepButton: 'Passer cette étape',
-
       // ----------- Create Account -----------
       createAccount: {
         title: 'Créer un compte',
@@ -508,7 +566,6 @@ const resources = {
         pseudoPlaceholder: 'Votre pseudo',
         authTitle: 'Comment fonctionne l\'authentification ?',
         authText: 'Nous vous enverrons un code à usage unique par {{contactType}} pour vérifier votre identité. Pas de mot de passe, c\'est plus simple et plus sécurisé.',
-        authBenefits: 'Cela nous permet de protéger votre compte et de synchroniser vos données sans jamais stocker de mot de passe.',
         commitmentTitle: 'Notre engagement',
         commitment1: '🔒 Sécurité des données : Vos informations sont chiffrées et protégées.',
         commitment2: '👤 Anonymat garanti : Vos souffles ne sont pas liés à votre identité réelle.',
@@ -517,11 +574,14 @@ const resources = {
         submitButtonLoading: 'Création en cours...',
         terms: 'En créant un compte, vous acceptez nos Conditions Générales d\'Utilisation et notre Politique de Confidentialité.',
         errorContactRequired: 'Veuillez entrer une adresse email ou un numéro de téléphone.',
+        demoNotice: {
+            title: "Note pour la démonstration",
+            text: "Pour les besoins de ce hackathon, la création de compte est simulée. Cliquer sur \"Créer mon compte\" vous amènera directement à l'étape de vérification sans envoi réel de code."
+        }
       },
-
       // ----------- Login -----------
       login: {
-        title: 'Connexion',
+        title: 'Login',
         subtitle: 'Le retour de l\'écho...',
         welcomeBack: 'Heureux de vous revoir !',
         instructions: 'Veuillez entrer votre contact pour recevoir un code de connexion.',
@@ -542,7 +602,6 @@ const resources = {
         submitButtonLoading: 'Envoi du code...',
         errorContactRequired: 'Veuillez entrer une adresse email ou un numéro de téléphone.',
       },
-
       // ----------- Verify OTP -----------
       verifyOtp: {
         title: 'Vérification',
@@ -564,7 +623,6 @@ const resources = {
         submitButton: 'Vérifier le code',
         submitButtonLoading: 'Vérification...',
       },
-      
       // ----------- Welcome (First Launch) -----------
       welcome: {
         feature1: { title: 'Souffles éphémères', description: 'Déposez des messages qui s\'évaporent naturellement.' },
@@ -583,8 +641,6 @@ const resources = {
         locationModalSkip: 'Continuer sans localisation',
         locationSuccessTitle: 'Localisation activée !',
         locationSuccessMessage: 'Vous êtes prêt(e) à explorer le monde des souffles.',
-        locationDeniedTitle: 'Localisation désactivée',
-        locationDeniedMessage: 'Certaines fonctionnalités seront limitées sans votre position. Vous pourrez l\'activer plus tard dans les paramètres de votre appareil.',
         audioModalTitle: 'Activer l\'expérience audio ?',
         audioModalText: 'L\'audio immersif enrichit votre exploration avec des ambiances sonores contextuelles et des effets spatiaux. Une immersion poétique sans casque, autour de vous.',
         audioModalButton: 'Oui, activer l\'audio',
@@ -593,6 +649,9 @@ const resources = {
         audioSuccessMessage: 'Plongez dans l\'univers sonore de Silagora.',
         audioDeniedTitle: 'Audio désactivé',
         audioDeniedMessage: 'L\'expérience sera moins immersive sans l\'audio. Vous pourrez l\'activer à tout moment dans les paramètres.',
+        languageChangedTitle: 'Langue modifiée',
+        languageChangedMessage: 'La langue de l\'application a été définie sur {{lang}}.',
+        juryAccessButton: 'Accès Jury / Mode Démo',
       },
     },
   },
@@ -608,8 +667,8 @@ const resources = {
         sections_tickets: 'Tickets and credits',
         ethics_title: "Our ethics",
         ethics_text: "No subscription, no pressure—purchases only to enhance your experience.",
-        legal_title: "Legal information",
-        legal_text: "Purchases are valid only on this device. No data is resold.",
+        legal_title: "Terms and Conditions of Sale (Simulated)",
+        legal_text: "Preamble: This shop is presented as part of a demonstration project. All purchases are simulated, and no real financial transactions are carried out.\n\n1. Purpose: The presented items (backgrounds, tickets) are digital goods for exclusive use within the Silagora application.\n\n2. Purchase Process: Selecting an item and confirming the purchase triggers a simulated transaction. No real payment will be requested or processed.\n\n3. Pricing: The displayed prices are purely indicative and for demonstration purposes.\n\n4. Right of Withdrawal: Given the digital nature of the items and the simulated nature of the transactions, the user acknowledges that no right of withdrawal applies.\n\n5. Usage: The obtained items are linked to the user's account on the device and are non-transferable, non-exchangeable, and non-refundable.\n\n6. Data Protection: In line with our ethics, no personal data or data related to simulated purchases is collected for commercial purposes or shared with third parties.",
         login_prompt_title: "Create an account to buy",
         login_prompt_text: "Log in to enjoy premium purchases.",
         login_prompt_button: "Create account",
@@ -627,55 +686,29 @@ const resources = {
         item_alert_purchase_success_cta: "Continue",
         item_alert_error_title: "Error",
         item_alert_error_text: "Unable to complete purchase. Please try again later.",
+        item_alert_use_credit_title: "Use a credit?",
+        item_alert_use_credit_message: "You can use 1 premium credit for this background. You will have {{count}} left.",
+        item_alert_use_credit_cta: "Use 1 credit",
+        item_alert_credit_used_title: "Credit used!",
+        item_alert_credit_used_message: "The \"{{name}}\" background has been applied.",
+        item_alert_premium_required_title: "Premium Credit Required",
+        item_alert_premium_required_message: "Find suspended tickets on the map to earn credits and use premium backgrounds.",
         items: {
-          ticket_pack_5: {
-            name: "5 Ticket Pack",
-            description: "Unlock 5 distant reveals.",
-            benefit1: "Reveal faraway breaths",
-            benefit2: "Usable anywhere",
-            benefit3: "Never expires",
-          },
-          suspended_ticket: {
-            name: "Suspended ticket",
-            description: "Gift a ticket to the community.",
-            benefit1: "Random gift to a stranger",
-            benefit2: "Appears as a present on the map",
-            benefit3: "Strengthens local connection",
-            benefit4: "Fosters community spirit",
-          },
-          background_mist: {
-            name: "Mystical mist",
-            description: "A misty veil for your breaths.",
-            benefit1: "Exclusive design",
-            benefit2: "Highlights your breaths",
-            benefit3: "Ephemeral and poetic",
-          },
-          background_sunray: {
-            name: "Sunrays",
-            description: "Shine your messages with golden light.",
-            benefit1: "Bright appearance",
-            benefit2: "Unique effect on the map",
-            benefit3: "For seasoned explorers",
-          },
-          background_autumn: {
-            name: "Autumn leaves",
-            description: "For warm, colorful breaths.",
-            benefit1: "Seasonal theme",
-            benefit2: "Ideal for gentle messages",
-            benefit3: "Limited time only",
-          },
+          ticket_pack_5: { name: "5 Ticket Pack", description: "Unlock 5 distant reveals.", benefit1: "Reveal faraway breaths", benefit2: "Usable anywhere", benefit3: "Never expires", },
+          suspended_ticket: { name: "Suspended ticket", description: "Gift a ticket to the community.", benefit1: "Random gift to a stranger", benefit2: "Appears as a present on the map", benefit3: "Strengthens local connection", benefit4: "Fosters community spirit", },
+          background_mist: { name: "Mystical mist", description: "A misty veil for your breaths.", benefit1: "Exclusive design", benefit2: "Highlights your breaths", benefit3: "Ephemeral and poetic", },
+          background_sunray: { name: "Sunrays", description: "Shine your messages with golden light.", benefit1: "Bright appearance", benefit2: "Unique effect on the map", benefit3: "For seasoned explorers", },
+          background_autumn: { name: "Autumn leaves", description: "For warm, colorful breaths.", benefit1: "Seasonal theme", benefit2: "Ideal for gentle messages", benefit3: "Limited time only", },
+          background_aquabolt: { name: "Aqua Bolt", description: "A vibrant blue icon, like a drop of water.", benefit1: "Modern and clean style", benefit2: "Symbol of clarity", benefit3: "Hackathon Exclusive", },
+          background_cityscape: { name: "Blue Cityscape", description: "A peaceful metropolis painted in watercolor.", benefit1: "Urban and serene atmosphere", benefit2: "Ideal for city reflections", benefit3: "A touch of architecture", },
+          background_clouds: { name: "Cotton Sky", description: "Soft and dreamy clouds in a summer sky.", benefit1: "Lightness and reverie", benefit2: "For airy messages", benefit3: "A timeless classic", },
+          background_contemporary: { name: "Contemporary Art", description: "Geometric shapes and warm colors.", benefit1: "Bold aesthetic", benefit2: "For structured thoughts", benefit3: "Express your modernity", },
+          background_neobolt: { name: "Neo Bolt", description: "A futuristic and enigmatic circuit board.", benefit1: "Technological look", benefit2: "For connected messages", benefit3: "Hackathon Exclusive", },
+          background_streetart: { name: "Urban Crow", description: "A touch of street art for your messages.", benefit1: "Urban and colorful style", benefit2: "For rebellious breaths", benefit3: "An ephemeral work of art", },
         },
       },
-
       // ----------- Navigation & Tabs -----------
-      tabs: {
-        map: 'Map',
-        dashboard: 'Dashboard',
-        moderation: 'Moderation',
-        about: 'About',
-        settings: 'Settings',
-      },
-
+      tabs: { map: 'Map', dashboard: 'Dashboard', moderation: 'Moderation', about: 'About', settings: 'Settings' },
       // ----------- Main Map Screen -----------
       title: 'Silagora',
       subtitle: '"A message left in this place can only be read by those who will walk this same ground"',
@@ -700,7 +733,6 @@ const resources = {
       clear: 'Clear',
       mapCleared: 'Map cleared',
       mapClearedMessage: 'The simulated breaths have been erased.',
-
       souffleRevealedTitle: 'Souffle Revealed! ✨',
       souffleRevealedMessage: 'A new message blossoms under your steps...',
       prepareContemplativeSpace: 'Preparing your contemplative space',
@@ -722,76 +754,46 @@ const resources = {
       locationPermissionDeniedTitle: 'Location Permission Denied',
       locationPermissionDeniedMessage: 'Location permission is permanently denied. Please enable it manually in your device settings.',
       openSettings: 'Open Settings',
-
       // ----------- Souffle Modal (compose a breath) -----------
-      depositBreath: 'Compose a breath',
-      leaveYourTrace: 'Leave your trace in this place',
-      anonymousMode: 'Anonymous mode',
-      anonymousDepositText: 'Your breath will be deposited anonymously. It will float freely, without being linked to an identity.',
-      breathPlaceholder: 'What would you like to whisper to this place?',
-      charactersRemaining_one: '{{count}} character remaining',
-      charactersRemaining_other: '{{count}} characters remaining',
-      chosenOrnament: 'Chosen ornament:',
-      addSticker: 'Add ornament',
-      hideStickers: 'Hide ornaments',
-      emotionsCategory: 'Emotions',
-      natureCategory: 'Nature',
-      objectsCategory: 'Objects',
-      symbolsCategory: 'Symbols',
-      premiumOrnamentsNote: '✨ Find suspended tickets on the map to unlock premium ornaments!',
-      breathDuration: 'Breath lifespan',
-      hours24: '24 hours',
-      hours48: '48 hours',
-      locationAnchorText: 'Your breath will be anchored to this precise location, like an invisible imprint',
-      poeticQuoteSouffle: 'A breath deposited here can only be revealed by those who will tread this same ground, creating a serendipitous encounter between wandering souls.',
-      depositHere: 'Deposit gently',
-      depositing: 'Depositing...',
-      breathDeposited: 'Breath deposited',
-      breathDepositedMessage: 'Your breath has been gently deposited in this place. It will now float waiting to be discovered.',
-
-      // ----------- Dashboard -----------
-      dashboard: {
-        title: 'Dashboard',
-        subtitle: 'Your personal statistics',
-        welcome: 'Hello, {{pseudo}} 🌸',
-        anonymous: {
-          title: 'Create an account to see your stats',
-          text: 'Discover your poetic footprint on the map, your achievements, and your progress.',
-        },
-        stats: {
-          created: 'Breaths Composed',
-          createdSubtitle: 'Your traces left behind',
-          revealed: 'Breaths Revealed',
-          revealedSubtitle: 'Discoveries made',
-          distance: 'Distance Walked',
-          distanceSubtitle: 'While exploring',
-          activeDays: 'Active Days',
-          activeDaysSubtitle: 'Since the beginning',
-        },
-        emotion: {
-          title: 'Your Signature Emotion',
-          subtitle: 'The emotion you express most often',
-        },
-        weeklyActivity: {
-          title: 'Weekly Activity',
-        },
-        achievements: {
-          title: 'Achievements',
-          subtitle: 'Unlock rewards by exploring Silagora',
-          achievementUnlocked: 'Unlocked',
-        },
-        advancedStats: {
-          title: 'Advanced Stats',
-          streak: 'Longest Streak',
-          streakUnit_one: '{{count}} day',
-          streakUnit_other: '{{count}} days',
-          places: 'Places Visited',
-          achievementsCount: 'Achievements',
-        },
+      composeSouffle: {
+        title: 'Compose a Breath',
+        subtitle: 'Leave your trace in this place',
+        anonymousMode: 'Anonymous Mode',
+        anonymousDepositText: 'Your breath will be deposited anonymously. It will float freely, without being linked to an identity.',
+        howDoYouFeel: '🧭 How do you feel?',
+        emotionHint: 'Your emotion will discreetly accompany your breath',
+        chooseEmotion: 'Choose an emotion...',
+        selectedOrnament: 'Chosen Ornament:',
+        addOrnament: 'Add an Ornament',
+        hideOrnaments: 'Hide Ornaments',
+        emotionsCategory: 'Emotions',
+        natureCategory: 'Nature',
+        objectsCategory: 'Objects',
+        symbolsCategory: 'Symbols',
+        premiumOrnamentsNote: '✨ Find suspended tickets on the map to unlock premium ornaments!',
+        messagePlaceholder: 'What would you like to whisper to this place?',
+        charactersRemaining_one: '{{count}} character remaining',
+        charactersRemaining_other: '{{count}} characters remaining',
+        souffleBackground: 'Breath Background',
+        backgroundHint: 'Use your earned credits to unlock premium backgrounds.',
+        lifespan: 'Breath Lifespan',
+        hours24: '24 hours',
+        hours48: '48 hours',
+        locationAnchorText: 'Your breath will be anchored to this precise location, like an invisible imprint',
+        poeticQuote: 'A breath deposited here can only be revealed by those who will tread this same ground, creating a serendipitous encounter between wandering souls.',
+        depositGently: 'Deposit Gently',
+        depositing: 'Depositing...',
+        positionUnavailable: 'Position unavailable',
+        souffleDeposited: 'Breath Deposited',
+        souffleDepositedMessage: 'Your breath has been gently deposited in this place.',
+        wonderful: 'Wonderful',
+        unexpectedError: 'An unexpected error occurred',
+        understood: 'Understood',
+        chooseEmotionModalTitle: 'Choose an emotion',
       },
-
       // ----------- Emotions -----------
       emotions: {
+        '': 'Choose an emotion...', // For placeholder
         joyeux: 'Joyful',
         triste: 'Sad',
         colere: 'Angry',
@@ -808,7 +810,6 @@ const resources = {
         emu: 'Moved',
         honteux: 'Ashamed',
       },
-
       // ----------- Moderation -----------
       moderation: {
         title: 'Citizen Moderation',
@@ -823,14 +824,61 @@ const resources = {
         rejectedConfirmation: 'Breath rejected and hidden.',
         notAuthorizedTitle: 'Unauthorized Access',
         notAuthorizedText: 'Moderation is reserved for users with a premium account.',
-        emptyQueue: 'Moderation queue is empty',
-        emptyQueueSubtext: 'No flagged breaths awaiting review at the moment. All is calm!',
+        emptyQueue: 'No more souffles to moderate.',
+        emptyQueueSubtext: 'All clear for now. Check back later!',
         refresh: 'Refresh',
         souffleId: 'Souffle ID',
         approve: 'Approve',
         reject: 'Reject',
+        votesCount: '{{count}} vote(s) already expressed.',
+        votesNeededText_one: '{{count}} vote remaining for a decision',
+        votesNeededText_other: '{{count}} votes remaining for a decision',
+        blockedMessageTitle: 'Message blocked',
+        blockedMessage: 'Your breath could not be deposited for the following reason(s):\n- {{reasons}}',
+        contentModifiedTitle: 'Content Modified',
+        contentModifiedMessage: 'Some words in your breath have been masked to comply with community guidelines.',
+        reasons: {
+          'Partage d\'URL non autorisé.': 'Unauthorized URL sharing.',
+          'Partage d\\\'informations personnelles (email/téléphone).': 'Sharing of personal information (email/phone).',
+          'Contenu inapproprié détecté': 'Inappropriate content detected',
+          'Contenu suspect détecté': 'Suspicious content detected',
+          'Usage excessif de majuscules.': 'Excessive use of capital letters.',
+          'Répétition excessive de caractères.': 'Excessive repetition of characters.',
+          'Signalement manuel': 'Manual Report'
+        }
       },
-
+      // ----------- Dashboard -----------
+      dashboard: {
+        title: 'Dashboard',
+        subtitle: 'Your journey at a glance',
+        welcome: 'Welcome, {{pseudo}}!',
+        stats: {
+          created: 'Breaths created',
+          createdSubtitle: 'messages written',
+          revealed: 'Breaths revealed',
+          revealedSubtitle: 'secrets discovered',
+          activeDays: 'Active days',
+          activeDaysSubtitle: 'days of exploration',
+          places: 'Places visited',
+          placesSubtitle: 'locations explored',
+        },
+        emotion: {
+          title: 'Your dominant emotion',
+          subtitle: 'What resonates most with you in your breaths',
+        },
+        weeklyActivity: {
+          title: 'Weekly Activity',
+        },
+        achievements: {
+          title: 'Your Achievements',
+          subtitle: 'Milestones of your journey',
+          achievementUnlocked: 'Achievement unlocked!',
+        },
+        anonymous: {
+          title: 'Log in to see your stats',
+          text: 'Create an account to track your progress, unlock achievements, and personalize your experience.',
+        },
+      },
       // ----------- Settings -----------
       settings: {
         audio: {
@@ -919,8 +967,17 @@ const resources = {
         moderationParticipationNote: 'Your participation is voluntary and contributes to a safer space for everyone.',
         understood: 'Understood',
         shop: 'Shop',
+        demoMode: {
+          title: "Demo Mode (Jury)",
+          subtitle: "Switch between anonymous mode and the developer account.",
+          enable: "Enable Demo Mode",
+          disable: "Disable Demo Mode",
+          alertEnabledTitle: "Demo Mode Enabled",
+          alertEnabledMessage: "The developer account is now active with full privileges.",
+          alertDisabledTitle: "Demo Mode Disabled",
+          alertDisabledMessage: "You are now in anonymous mode."
+        }
       },
-
       // ----------- About -----------
       about: {
         title: 'About Silagora',
@@ -968,7 +1025,6 @@ const resources = {
         version: 'Version {{version}}',
         hackathonCredit: 'Made with 💙 for the Bolt Hackathon • June 2025',
       },
-
       // ADDED COMMON SECTION
       common: {
         tooFarToRevealTitle: "Too Far to Reveal",
@@ -981,37 +1037,23 @@ const resources = {
         ticketsExhausted: "No Tickets Left",
         visitShopForMoreTickets: "Visit the shop to get more tickets.",
         functionalityReserved: "Reserved Functionality",
-        accountRequiredForDistantReveal: "Distant revealing requires an account to manage your tickets."
+        accountRequiredForDistantReveal: "Distant revealing requires an account to manage your tickets.",
+        giftClaimedTitle: "Gift Claimed!",
+        giftClaimedMessage: "A premium credit has been added to your account. Use it to get exclusive ornaments!",
+        connectionRequiredTitle: "Login Required",
+        connectionRequiredMessage: "You must have an account to claim gifts.",
+        tooFarGiftTitle: "Too Far",
+        tooFarGiftMessage: "Approach this gift to claim it.",
       },
-
       // ----------- Achievements -----------
       achievements: {
-        first_souffle: {
-          title: 'First Breath',
-          description: 'Deposit your first breath',
-        },
-        explorer: {
-          title: 'Explorer',
-          description: 'Reveal 10 breaths',
-        },
-        poet: {
-          title: 'Urban Poet',
-          description: 'Create 25 breaths',
-        },
-        wanderer: {
-          title: 'Wanderer',
-          description: 'Walk 10 km while exploring',
-        },
-        consistent: {
-          title: 'Consistent',
-          description: 'Use Silagora for 7 consecutive days',
-        },
-        social: {
-          title: 'Connector',
-          description: 'Reveal breaths in 5 different places',
-        },
+        first_souffle: { title: 'First Breath', description: 'Deposit your first breath' },
+        explorer: { title: 'Explorer', description: 'Reveal 10 breaths' },
+        poet: { title: 'Urban Poet', description: 'Create 25 breaths' },
+        wanderer: { title: 'Wanderer', description: 'Walk 10 km while exploring' },
+        consistent: { title: 'Consistent', description: 'Use Silagora for 7 consecutive days' },
+        social: { title: 'Connector', description: 'Reveal breaths in 5 different places' },
       },
-
       // ----------- Master Login -----------
       masterLogin: {
         title: 'Master Access',
@@ -1050,7 +1092,6 @@ const resources = {
           text: 'Login as Master',
         },
       },
-
       // ----------- Complete Profile -----------
       completeProfileTitle: 'Complete Profile',
       completeProfileSubtitle: 'Final step before takeoff',
@@ -1085,7 +1126,6 @@ const resources = {
       finalizingProfile: 'Finalizing...',
       completeProfileButton: 'Complete Profile',
       skipStepButton: 'Skip this step',
-
       // ----------- Create Account -----------
       createAccount: {
         title: 'Create Account',
@@ -1100,7 +1140,6 @@ const resources = {
         pseudoPlaceholder: 'Your pseudo',
         authTitle: 'How does authentication work?',
         authText: 'We will send you a one-time code via {{contactType}} to verify your identity. No password, it\'s simpler and more secure.',
-        authBenefits: 'This allows us to protect your account and sync your data without ever storing a password.',
         commitmentTitle: 'Our commitment',
         commitment1: '🔒 Data security: Your information is encrypted and protected.',
         commitment2: '👤 Anonymity guaranteed: Your breaths are not linked to your real identity.',
@@ -1109,8 +1148,11 @@ const resources = {
         submitButtonLoading: 'Creating account...',
         terms: 'By creating an account, you agree to our Terms of Service and Privacy Policy.',
         errorContactRequired: 'Please enter an email address or phone number.',
+        demoNotice: {
+            title: "Demonstration Note",
+            text: "For the purpose of this hackathon, account creation is simulated. Clicking 'Create My Account' will take you directly to the verification step without any real code being sent."
+        }
       },
-
       // ----------- Login -----------
       login: {
         title: 'Login',
@@ -1134,7 +1176,6 @@ const resources = {
         submitButtonLoading: 'Sending code...',
         errorContactRequired: 'Please enter an email address or phone number.',
       },
-
       // ----------- Verify OTP -----------
       verifyOtp: {
         title: 'Verification',
@@ -1156,7 +1197,6 @@ const resources = {
         submitButton: 'Verify Code',
         submitButtonLoading: 'Verifying...',
       },
-
       // ----------- Welcome (First Launch) -----------
       welcome: {
         feature1: { title: 'Ephemeral breaths', description: 'Leave messages that naturally vanish.' },
@@ -1175,8 +1215,6 @@ const resources = {
         locationModalSkip: 'Continue without location',
         locationSuccessTitle: 'Location Enabled!',
         locationSuccessMessage: 'You are ready to explore the world of breaths.',
-        locationDeniedTitle: 'Location Disabled',
-        locationDeniedMessage: 'Some features will be limited without your location. You can enable it later in your device settings.',
         audioModalTitle: 'Enable Audio Experience?',
         audioModalText: 'Immersive audio enriches your exploration with contextual soundscapes and spatial effects. A poetic immersion without headphones, all around you.',
         audioModalButton: 'Yes, enable audio',
@@ -1185,68 +1223,100 @@ const resources = {
         audioSuccessMessage: 'Dive into Silagora\'s sound world.',
         audioDeniedTitle: 'Audio Disabled',
         audioDeniedMessage: 'The experience will be less immersive without audio. You can enable it anytime in settings.',
+        languageChangedTitle: 'Language Changed',
+        languageChangedMessage: 'The application language has been set to {{lang}}.',
+        juryAccessButton: 'Jury Access / Demo Mode',
       },
     },
   },
 };
 
-const availableLanguages = [
+interface Language {
+  code: string;
+  name: string;
+  native: string;
+}
+
+const availableLanguages: Language[] = [
   { code: 'fr', name: 'French', native: 'Français' },
   { code: 'en', name: 'English', native: 'English' }
 ];
 
-const LanguageContext = createContext<any>(null);
+interface LanguageContextType {
+  language: string;
+  t: typeof i18n.t;
+  currentLanguage: string;
+  changeLanguage: (lang: string) => Promise<void>;
+  availableLanguages: Language[];
+}
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState('fr');
+  const [language, setLanguage] = useState<string>('fr');
 
   useEffect(() => {
-    const loadLang = async () => {
-      const savedLang = await AsyncStorage.getItem('@souffle:language');
-      if (savedLang && ['fr', 'en'].includes(savedLang)) {
-        setLanguage(savedLang);
-        i18n.changeLanguage(savedLang);
+    const loadAndInitLanguage = async () => {
+      try {
+        const savedLang = await AsyncStorage.getItem(STORAGE_KEY);
+        const initialLang = (savedLang && availableLanguages.some(l => l.code === savedLang)) ? savedLang : 'fr';
+        
+        setLanguage(initialLang);
+        i18n
+          .use(initReactI18next)
+          .init({
+            resources,
+            lng: initialLang,
+            fallbackLng: 'fr',
+            compatibilityJSON: 'v3',
+            interpolation: {
+              escapeValue: false,
+            },
+          });
+      } catch (error) {
+        console.error("Failed to load language from storage or init i18next:", error);
+        setLanguage('fr');
+        i18n.use(initReactI18next).init({
+          resources,
+          lng: 'fr',
+          fallbackLng: 'fr',
+          compatibilityJSON: 'v3',
+          interpolation: { escapeValue: false },
+        });
       }
     };
-    loadLang();
+    loadAndInitLanguage();
   }, []);
 
-  useEffect(() => {
-    i18n
-      .use(initReactI18next)
-      .init({
-        resources,
-        lng: language,
-        fallbackLng: 'fr',
-        compatibilityJSON: 'v3',
-        interpolation: {
-          escapeValue: false,
-        },
-      });
-  }, [language]);
-
-  const changeLanguage = async (lang: string) => {
-    if (['fr', 'en'].includes(lang)) {
+  const changeLanguage = useCallback(async (lang: string) => {
+    if (availableLanguages.some(l => l.code === lang)) {
       setLanguage(lang);
-      i18n.changeLanguage(lang);
-      await AsyncStorage.setItem('@souffle:language', lang);
+      await i18n.changeLanguage(lang);
+      await AsyncStorage.setItem(STORAGE_KEY, lang);
+    } else {
+      console.warn(`Language code '${lang}' is not supported.`);
     }
+  }, []);
+
+  const contextValue: LanguageContextType = {
+    language,
+    t: i18n.t,
+    currentLanguage: language,
+    changeLanguage,
+    availableLanguages,
   };
 
   return (
-    <LanguageContext.Provider value={{
-      language,
-      setLanguage: changeLanguage,
-      t: i18n.t.bind(i18n),
-      currentLanguage: language,
-      changeLanguage,
-      availableLanguages,
-    }}>
+    <LanguageContext.Provider value={contextValue}>
       {children}
     </LanguageContext.Provider>
   );
 }
 
 export function useLanguage() {
-  return useContext(LanguageContext);
+  const context = useContext(LanguageContext);
+  if (context === undefined) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  return context;
 }

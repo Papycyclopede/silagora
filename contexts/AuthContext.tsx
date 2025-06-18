@@ -1,109 +1,94 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { User, AuthState, CreateAccountData, LoginData, OTPVerification } from '@/types/auth';
+import { Session, AuthChangeEvent, User as SupabaseUser } from '@supabase/supabase-js';
+import { supabase } from '@/utils/supabaseClient';
+import type { User, AuthState, CreateAccountData, LoginData, ModerationLevel } from '@/types/auth';
+import { AVAILABLE_BACKGROUNDS } from '@/utils/backgrounds'; // Import pour donner tous les fonds au compte démo
 
 interface AuthContextType extends AuthState {
+  session: Session | null;
   createAccount: (data: CreateAccountData) => Promise<{ success: boolean; error?: string }>;
   login: (data: LoginData) => Promise<{ success: boolean; error?: string }>;
-  verifyOTP: (code: string) => Promise<{ success: boolean; error?: string }>;
-  resendOTP: () => Promise<{ success: boolean; error?: string }>;
+  verifyOTP: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<{ success: boolean; error?: string }>;
-  createMasterAccount: () => Promise<{ success: boolean; error?: string }>;
-  spendTicket: () => Promise<boolean>;
+  purchaseItem: (itemId: string) => Promise<{success: boolean}>;
   addPremiumCredit: () => Promise<void>;
+  spendTicket: () => Promise<boolean>;
   spendPremiumCredit: () => Promise<boolean>;
-  pendingVerification: OTPVerification | null;
+  signInAsMaster: () => Promise<{ success: boolean; error?: string }>;
+  updateUserModerationScore: (userId: string, change: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pendingVerification, setPendingVerification] = useState<OTPVerification | null>(null);
 
   useEffect(() => {
-    loadStoredAuth();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsAuthenticated(!!session);
+      if (session) {
+        fetchUserProfile(session.user);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
+        setSession(session);
+        setIsAuthenticated(!!session);
+        if (session) {
+          fetchUserProfile(session.user);
+        } else {
+          setUser(null);
+        }
+      }
+    );
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  const loadStoredAuth = async () => {
+  const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
     try {
-      setIsLoading(true);
-      const storedUser = await AsyncStorage.getItem('@souffle:user');
-      const storedAuth = await AsyncStorage.getItem('@souffle:authenticated');
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', supabaseUser.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
       
-      if (storedUser && storedAuth === 'true') {
-        const userData = JSON.parse(storedUser);
-        
-        if (typeof userData.ticketCount === 'undefined') userData.ticketCount = 3;
-        if (typeof userData.premiumUsageCredits === 'undefined') userData.premiumUsageCredits = 0;
-        
-        setUser({
-          ...userData,
-          createdAt: new Date(userData.createdAt),
-          lastLoginAt: new Date(userData.lastLoginAt),
-        });
-        setIsAuthenticated(true);
+      if (profileData) {
+        const userProfile: User = {
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          pseudo: profileData.pseudo,
+          createdAt: new Date(profileData.created_at),
+          lastLoginAt: new Date(profileData.last_login_at),
+          isMaster: profileData.is_master,
+          premiumAccess: profileData.premium_access,
+          unlimitedTickets: profileData.unlimited_tickets,
+          ticketCount: profileData.ticket_count,
+          premiumUsageCredits: profileData.premium_usage_credits,
+          moderationScore: profileData.moderation_score,
+          moderationLevel: profileData.moderation_level,
+          isVerified: !!supabaseUser.email_confirmed_at,
+          preferredContact: 'email', 
+          ownedBackgrounds: profileData.owned_backgrounds || [],
+        };
+        setUser(userProfile);
       }
-    } catch (error) {
-      console.error('Erreur lors du chargement de l\'authentification:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const generateOTP = (): string => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  };
-
-  const sendOTP = async (contact: string, type: 'email' | 'phone'): Promise<string> => {
-    const code = generateOTP();
-    console.log(`OTP envoyé à ${contact}: ${code}`);
-    if (type === 'email') {
-      console.log(`Email OTP envoyé à ${contact}: ${code}`);
-    } else {
-      console.log(`SMS OTP envoyé à ${contact}: ${code}`);
-    }
-    return code;
-  };
-
-  const createMasterAccount = async (): Promise<{ success: boolean; error?: string }> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const masterUser: User = {
-        id: `master_${Date.now()}`,
-        email: 'demo@lesouffle.app',
-        pseudo: 'Développeur Démo',
-        createdAt: new Date(),
-        lastLoginAt: new Date(),
-        isVerified: true,
-        preferredContact: 'email',
-        isMaster: true,
-        premiumAccess: true,
-        unlimitedTickets: true, 
-        ticketCount: 99,
-        premiumUsageCredits: 5,
-      };
-
-      setUser(masterUser);
-      setIsAuthenticated(true);
-      
-      await AsyncStorage.setItem('@souffle:user', JSON.stringify(masterUser));
-      await AsyncStorage.setItem('@souffle:authenticated', 'true');
-
-      return { success: true };
-    } catch (error) {
-      console.error('Erreur lors de la création du compte maître:', error);
-      return { success: false, error: 'Erreur lors de la création du compte maître' };
+    } catch (e: any) {
+      console.error("Erreur lors de la récupération du profil:", e);
+      setError(e.message);
     } finally {
       setIsLoading(false);
     }
@@ -111,269 +96,159 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const createAccount = async (data: CreateAccountData): Promise<{ success: boolean; error?: string }> => {
     try {
-      setIsLoading(true);
-      setError(null);
-      if (data.type === 'email' && !isValidEmail(data.contact)) {
-        return { success: false, error: 'Adresse email invalide' };
-      }
-      if (data.type === 'phone' && !isValidPhone(data.contact)) {
-        return { success: false, error: 'Numéro de téléphone invalide' };
-      }
-      const existingUsers = await AsyncStorage.getItem('@souffle:users');
-      const users = existingUsers ? JSON.parse(existingUsers) : [];
-      const existingUser = users.find((u: User) => 
-        (u.email === data.contact && data.type === 'email') ||
-        (u.phone === data.contact && data.type === 'phone')
-      );
-      if (existingUser) {
-        return { success: false, error: 'Un compte existe déjà avec ce contact' };
-      }
-      const otpCode = await sendOTP(data.contact, data.type);
-      const verification: OTPVerification = {
-        code: otpCode,
-        contact: data.contact,
-        type: data.type,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-        attempts: 0,
-      };
-      setPendingVerification(verification);
-      await AsyncStorage.setItem('@souffle:pending_account', JSON.stringify({
-        ...data,
-        verification,
-      }));
+      const { error } = await supabase.auth.signInWithOtp({
+        email: data.contact,
+        options: { shouldCreateUser: true, data: { pseudo: data.pseudo } },
+      });
+      if (error) throw error;
       return { success: true };
-    } catch (error) {
-      console.error('Erreur lors de la création du compte:', error);
-      return { success: false, error: 'Erreur lors de la création du compte' };
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      return { success: false, error: error.message };
     }
   };
 
   const login = async (data: LoginData): Promise<{ success: boolean; error?: string }> => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const existingUsers = await AsyncStorage.getItem('@souffle:users');
-      const users = existingUsers ? JSON.parse(existingUsers) : [];
-      const existingUser = users.find((u: User) => 
-        (u.email === data.contact && data.type === 'email') ||
-        (u.phone === data.contact && data.type === 'phone')
-      );
-      if (!existingUser) {
-        return { success: false, error: 'Aucun compte trouvé avec ce contact' };
-      }
-      const otpCode = await sendOTP(data.contact, data.type);
-      const verification: OTPVerification = {
-        code: otpCode,
-        contact: data.contact,
-        type: data.type,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-        attempts: 0,
-      };
-      setPendingVerification(verification);
-      await AsyncStorage.setItem('@souffle:pending_login', JSON.stringify({
-        userId: existingUser.id,
-        verification,
-      }));
+     try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: data.contact,
+        options: { shouldCreateUser: false },
+      });
+      if (error) throw error;
       return { success: true };
-    } catch (error) {
-      console.error('Erreur lors de la connexion:', error);
-      return { success: false, error: 'Erreur lors de la connexion' };
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      return { success: false, error: error.message };
     }
   };
 
-  const verifyOTP = async (code: string): Promise<{ success: boolean; error?: string }> => {
+  const verifyOTP = async (email: string, code: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      setIsLoading(true);
-      setError(null);
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email,
+        token: code,
+        type: 'magiclink',
+      });
 
-      if (!pendingVerification) {
-        return { success: false, error: 'Aucune vérification en cours' };
-      }
-      if (new Date() > pendingVerification.expiresAt) {
-        setPendingVerification(null);
-        await AsyncStorage.removeItem('@souffle:pending_account');
-        await AsyncStorage.removeItem('@souffle:pending_login');
-        return { success: false, error: 'Le code a expiré. Veuillez en demander un nouveau.' };
-      }
-      if (pendingVerification.attempts >= 5) {
-        setPendingVerification(null);
-        await AsyncStorage.removeItem('@souffle:pending_account');
-        await AsyncStorage.removeItem('@souffle:pending_login');
-        return { success: false, error: 'Trop de tentatives. Veuillez recommencer.' };
-      }
-      if (code !== pendingVerification.code) {
-        const updatedVerification = { ...pendingVerification, attempts: pendingVerification.attempts + 1 };
-        setPendingVerification(updatedVerification);
-        return { success: false, error: `Code incorrect. ${5 - updatedVerification.attempts} tentatives restantes.` };
-      }
-
-      const pendingAccount = await AsyncStorage.getItem('@souffle:pending_account');
-      const pendingLogin = await AsyncStorage.getItem('@souffle:pending_login');
-
-      if (pendingAccount) {
-        const accountData = JSON.parse(pendingAccount);
-        const newUser: User = {
-          id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          email: accountData.type === 'email' ? accountData.contact : undefined,
-          phone: accountData.type === 'phone' ? accountData.contact : undefined,
-          pseudo: accountData.pseudo || undefined,
-          createdAt: new Date(),
-          lastLoginAt: new Date(),
-          isVerified: true,
-          preferredContact: accountData.type,
-          ticketCount: 3,
-          premiumUsageCredits: 0,
-        };
-        const existingUsers = await AsyncStorage.getItem('@souffle:users');
-        const users = existingUsers ? JSON.parse(existingUsers) : [];
-        users.push(newUser);
-        await AsyncStorage.setItem('@souffle:users', JSON.stringify(users));
-        setUser(newUser);
-        setIsAuthenticated(true);
-        await AsyncStorage.setItem('@souffle:user', JSON.stringify(newUser));
-        await AsyncStorage.setItem('@souffle:authenticated', 'true');
-      } else if (pendingLogin) {
-        const loginData = JSON.parse(pendingLogin);
-        const existingUsers = await AsyncStorage.getItem('@souffle:users');
-        const users = existingUsers ? JSON.parse(existingUsers) : [];
-        const userToLogin = users.find((u: User) => u.id === loginData.userId);
-        if (userToLogin) {
-          const updatedUser = { ...userToLogin, lastLoginAt: new Date(), createdAt: new Date(userToLogin.createdAt) };
-          const updatedUsers = users.map((u: User) => u.id === userToLogin.id ? updatedUser : u);
-          await AsyncStorage.setItem('@souffle:users', JSON.stringify(updatedUsers));
-          setUser(updatedUser);
-          setIsAuthenticated(true);
-          await AsyncStorage.setItem('@souffle:user', JSON.stringify(updatedUser));
-          await AsyncStorage.setItem('@souffle:authenticated', 'true');
+      if (error) throw error;
+      
+      if(data.user) {
+        const { data: profileData } = await supabase.from('profiles').select('id').eq('id', data.user.id).single();
+        if (!profileData) {
+          const { error: insertError } = await supabase.from('profiles').insert({
+            id: data.user.id,
+            pseudo: data.user.user_metadata.pseudo || null,
+          });
+          if (insertError) throw insertError;
         }
       }
-
-      setPendingVerification(null);
-      await AsyncStorage.removeItem('@souffle:pending_account');
-      await AsyncStorage.removeItem('@souffle:pending_login');
-
       return { success: true };
-    } catch (error) {
-      console.error('Erreur lors de la vérification OTP:', error);
-      return { success: false, error: 'Erreur lors de la vérification' };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const resendOTP = async (): Promise<{ success: boolean; error?: string }> => {
-    try {
-      if (!pendingVerification) return { success: false, error: 'Aucune vérification en cours' };
-      const newCode = await sendOTP(pendingVerification.contact, pendingVerification.type);
-      const newVerification: OTPVerification = { ...pendingVerification, code: newCode, expiresAt: new Date(Date.now() + 10 * 60 * 1000), attempts: 0 };
-      setPendingVerification(newVerification);
-      return { success: true };
-    } catch (error) {
-      console.error('Erreur lors du renvoi OTP:', error);
-      return { success: false, error: 'Erreur lors du renvoi du code' };
+    } catch (error: any) {
+      return { success: false, error: error.message };
     }
   };
 
   const logout = async (): Promise<void> => {
-    try {
-      setUser(null);
-      setIsAuthenticated(false);
-      setPendingVerification(null);
-      await AsyncStorage.multiRemove(['@souffle:user', '@souffle:authenticated', '@souffle:pending_account', '@souffle:pending_login']);
-    } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
+    // Si l'utilisateur est un vrai utilisateur Supabase, on se déconnecte
+    if(session) {
+      await supabase.auth.signOut();
     }
+    // Dans tous les cas, on réinitialise l'état local
+    setUser(null);
+    setSession(null);
+    setIsAuthenticated(false);
   };
 
   const updateProfile = async (data: Partial<User>): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: 'Utilisateur non connecté' };
     try {
-      if (!user) return { success: false, error: 'Utilisateur non connecté' };
-      const updatedUser = { ...user, ...data };
-      const existingUsers = await AsyncStorage.getItem('@souffle:users');
-      let users = existingUsers ? JSON.parse(existingUsers) : [];
-      const userIndex = users.findIndex((u: User) => u.id === user.id);
-      if (userIndex > -1) {
-        users[userIndex] = updatedUser;
-      } else {
-        users.push(updatedUser);
-      }
-      await AsyncStorage.setItem('@souffle:users', JSON.stringify(users));
-      await AsyncStorage.setItem('@souffle:user', JSON.stringify(updatedUser));
-      setUser(updatedUser);
+      const updateData: { [key: string]: any } = {};
+      if (data.ownedBackgrounds !== undefined) updateData.owned_backgrounds = data.ownedBackgrounds;
+      if (data.premiumAccess !== undefined) updateData.premium_access = data.premiumAccess;
+      if (data.ticketCount !== undefined) updateData.ticket_count = data.ticketCount;
+      if (data.premiumUsageCredits !== undefined) updateData.premium_usage_credits = data.premiumUsageCredits;
+
+      const { error } = await supabase.from('profiles').update(updateData).eq('id', user.id);
+      if (error) throw error;
+      
+      if (session) await fetchUserProfile(session.user);
       return { success: true };
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du profil:', error);
-      return { success: false, error: 'Erreur lors de la mise à jour' };
+    } catch (error: any) {
+       console.error("Erreur de mise à jour du profil:", error);
+       return { success: false, error: error.message };
     }
+  };
+  
+  const addPremiumCredit = async () => {
+    if (!user) return;
+    await updateProfile({ premiumUsageCredits: (user.premiumUsageCredits || 0) + 1 });
   };
 
   const spendTicket = async (): Promise<boolean> => {
-    if (!user || !isAuthenticated) return false;
-    if (user.unlimitedTickets) return true;
-    const currentTickets = user.ticketCount || 0;
-    if (currentTickets <= 0) return false;
-    await updateProfile({ ticketCount: currentTickets - 1 });
-    return true;
-  };
-  
-  const addPremiumCredit = async (): Promise<void> => {
-    if (!user) return;
-    const newCredits = (user.premiumUsageCredits || 0) + 1;
-    await updateProfile({ premiumUsageCredits: newCredits });
+    if (!user || !user.ticketCount || user.ticketCount <= 0) return false;
+    const result = await updateProfile({ ticketCount: user.ticketCount - 1 });
+    return result.success;
   };
 
   const spendPremiumCredit = async (): Promise<boolean> => {
-    if (!user) return false;
-    const currentCredits = user.premiumUsageCredits || 0;
-    if (currentCredits <= 0) return false;
-    await updateProfile({ premiumUsageCredits: currentCredits - 1 });
-    return true;
+    if (!user || !user.premiumUsageCredits || user.premiumUsageCredits <= 0) return false;
+    const result = await updateProfile({ premiumUsageCredits: user.premiumUsageCredits - 1 });
+    return result.success;
+  };
+  
+  const purchaseItem = async (itemId: string): Promise<{success: boolean}> => {
+    if (!user) return {success: false};
+    
+    const currentOwned = user.ownedBackgrounds || [];
+    if (currentOwned.includes(itemId)) return {success: true};
+    
+    const newOwned = [...currentOwned, itemId];
+    
+    const result = await updateProfile({ ownedBackgrounds: newOwned, premiumAccess: true });
+    return {success: result.success};
+  }
+
+  // CORRECTION: Connexion simulée instantanée pour le jury
+  const signInAsMaster = async (): Promise<{ success: boolean; error?: string }> => {
+    console.log("Activation du mode Maître / Jury...");
+    
+    const masterUser: User = {
+      id: 'master-demo-user-id',
+      email: 'demo@lesouffle.app',
+      pseudo: 'Jury Silagora',
+      createdAt: new Date(),
+      lastLoginAt: new Date(),
+      isVerified: true,
+      preferredContact: 'email',
+      isMaster: true,
+      premiumAccess: true,
+      unlimitedTickets: true,
+      ticketCount: 999,
+      premiumUsageCredits: 999,
+      moderationScore: 1000,
+      moderationLevel: 'trusted',
+      ownedBackgrounds: AVAILABLE_BACKGROUNDS.map(bg => bg.id),
+    };
+
+    setUser(masterUser);
+    setSession(null); // Il n'y a pas de session Supabase pour cet utilisateur simulé
+    setIsAuthenticated(true);
+
+    return { success: true };
   };
 
-  const value: AuthContextType = {
-    user,
-    isAuthenticated,
-    isLoading,
-    error,
-    pendingVerification,
-    createAccount,
-    login,
-    verifyOTP,
-    resendOTP,
-    logout,
-    updateProfile,
-    createMasterAccount,
-    spendTicket,
-    addPremiumCredit,
-    spendPremiumCredit,
-  };
+  const updateUserModerationScore = async () => {};
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
+  const value = {
+    user, session, isAuthenticated, isLoading, error,
+    createAccount, login, verifyOTP, logout, updateProfile,
+    purchaseItem, addPremiumCredit, spendTicket, spendPremiumCredit,
+    signInAsMaster, updateUserModerationScore
+  } as AuthContextType;
 
-function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-function isValidPhone(phone: string): boolean {
-  // CORRIGÉ : Le '}' a été remplacé par ']'
-  const phoneRegex = /^(\+33|0)[1-9](\d{8})$/;
-  return phoneRegex.test(phone.replace(/\s/g, ''));
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }

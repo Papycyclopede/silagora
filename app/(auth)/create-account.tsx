@@ -7,40 +7,45 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { ArrowLeft, Mail, Phone, User } from 'lucide-react-native';
+import { ArrowLeft, Mail, User, AlertTriangle } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function CreateAccountScreen() {
-  const [contactType, setContactType] = useState<'email' | 'phone'>('email');
-  const [contact, setContact] = useState('');
+  const [email, setEmail] = useState('');
   const [pseudo, setPseudo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
+  // --- MODIFICATION 1 : On récupère la fonction createAccount du contexte ---
   const { createAccount } = useAuth();
   const { t } = useLanguage();
 
   const handleSubmit = async () => {
-    if (!contact.trim()) {
+    if (!email.trim()) {
       Alert.alert(t('error'), t('createAccount.errorContactRequired'));
       return;
     }
-
-    // Le pseudo est maintenant vraiment optionnel
     setIsLoading(true);
-    
+
+    // --- MODIFICATION 2 : On appelle la nouvelle fonction createAccount avec les données ---
     const result = await createAccount({
-      contact: contact.trim(),
-      type: contactType,
-      pseudo: pseudo.trim() || undefined, // Optionnel
+      contact: email.trim(),
+      type: 'email', // On force le type email
+      pseudo: pseudo.trim() || undefined,
     });
 
     setIsLoading(false);
 
     if (result.success) {
-      router.push('/(auth)/verify-otp');
+      // --- MODIFICATION 3 : On navigue vers l'écran OTP en passant l'email ---
+      // C'est nécessaire pour que l'écran suivant sache quel email vérifier.
+      router.push({
+        pathname: '/(auth)/verify-otp',
+        params: { email: email.trim() },
+      });
     } else {
       Alert.alert(t('error'), result.error || t('unexpectedError'));
     }
@@ -48,7 +53,6 @@ export default function CreateAccountScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={22} color="#8B7355" />
@@ -58,72 +62,35 @@ export default function CreateAccountScreen() {
           <Text style={styles.subtitle}>{t('createAccount.subtitle')}</Text>
         </View>
       </View>
-
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Sélection du type de contact */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('createAccount.howToConnect')}</Text>
-          
-          <View style={styles.contactTypeButtons}>
-            <TouchableOpacity
-              style={[
-                styles.contactTypeButton,
-                contactType === 'email' && styles.activeContactTypeButton,
-              ]}
-              onPress={() => setContactType('email')}
-            >
-              <Mail size={20} color={contactType === 'email' ? '#F9F5F0' : '#8B7355'} />
-              <Text style={[
-                styles.contactTypeText,
-                contactType === 'email' && styles.activeContactTypeText,
-              ]}>
-                {t('email')}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.contactTypeButton,
-                contactType === 'phone' && styles.activeContactTypeButton,
-              ]}
-              onPress={() => setContactType('phone')}
-            >
-              <Phone size={20} color={contactType === 'phone' ? '#F9F5F0' : '#8B7355'} />
-              <Text style={[
-                styles.contactTypeText,
-                contactType === 'phone' && styles.activeContactTypeText,
-              ]}>
-                {t('phone')}
-              </Text>
-            </TouchableOpacity>
+        {/* Suppression de la sélection de type de contact, car on n'utilise que l'email */}
+        <View style={styles.demoNotice}>
+          <AlertTriangle size={20} color="#B45309" />
+          <View style={styles.demoNoticeTextContainer}>
+            <Text style={styles.demoNoticeTitle}>Authentification Réelle</Text>
+            <Text style={styles.demoNoticeText}>Un code de vérification vous sera envoyé par e-mail. Pas de simulation !</Text>
           </View>
         </View>
 
-        {/* Saisie du contact */}
         <View style={styles.section}>
           <Text style={styles.inputLabel}>
-            {contactType === 'email' ? t('createAccount.emailLabel') : t('createAccount.phoneLabel')}
+            {t('createAccount.emailLabel')}
           </Text>
           <View style={styles.inputContainer}>
-            {contactType === 'email' ? (
-              <Mail size={18} color="#8B7355" style={styles.inputIcon} />
-            ) : (
-              <Phone size={18} color="#8B7355" style={styles.inputIcon} />
-            )}
+            <Mail size={18} color="#8B7355" style={styles.inputIcon} />
             <TextInput
               style={styles.textInput}
-              placeholder={contactType === 'email' ? t('createAccount.emailPlaceholder') : t('createAccount.phonePlaceholder')}
+              placeholder={t('createAccount.emailPlaceholder')}
               placeholderTextColor="#B8A082"
-              value={contact}
-              onChangeText={setContact}
-              keyboardType={contactType === 'email' ? 'email-address' : 'phone-pad'}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType={'email-address'}
               autoCapitalize="none"
               autoCorrect={false}
             />
           </View>
         </View>
 
-        {/* Pseudo - vraiment optionnel */}
         <View style={styles.section}>
           <Text style={styles.inputLabel}>{t('createAccount.pseudoLabel')}</Text>
           <Text style={styles.inputHint}>
@@ -141,57 +108,24 @@ export default function CreateAccountScreen() {
             />
           </View>
         </View>
-
-        {/* Informations sur l'authentification */}
-        <View style={styles.infoSection}>
-          <Text style={styles.infoTitle}>{t('createAccount.authTitle')}</Text>
-          <Text style={styles.infoText}>
-            {t('createAccount.authText', { contactType: contactType === 'email' ? t('email') : t('sms') })}
-          </Text>
-          <Text style={styles.infoText}>
-            {t('createAccount.authBenefits')}
-          </Text>
-        </View>
-
-        {/* Éthique et confidentialité */}
-        <View style={styles.ethicsSection}>
-          <Text style={styles.ethicsTitle}>{t('createAccount.commitmentTitle')}</Text>
-          <View style={styles.ethicsItem}>
-            <Text style={styles.ethicsEmoji}>🔒</Text>
-            <Text style={styles.ethicsText}>
-              {t('createAccount.commitment1')}
-            </Text>
-          </View>
-          <View style={styles.ethicsItem}>
-            <Text style={styles.ethicsEmoji}>👤</Text>
-            <Text style={styles.ethicsText}>
-              {t('createAccount.commitment2')}
-            </Text>
-          </View>
-          <View style={styles.ethicsItem}>
-            <Text style={styles.ethicsEmoji}>🌱</Text>
-            <Text style={styles.ethicsText}>
-              {t('createAccount.commitment3')}
-            </Text>
-          </View>
-        </View>
       </ScrollView>
-
-      {/* Bouton de création */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[
             styles.createButton,
-            (!contact.trim() || isLoading) && styles.disabledButton,
+            (!email.trim() || isLoading) && styles.disabledButton,
           ]}
           onPress={handleSubmit}
-          disabled={!contact.trim() || isLoading}
+          disabled={!email.trim() || isLoading}
         >
-          <Text style={styles.createButtonText}>
-            {isLoading ? t('createAccount.submitButtonLoading') : t('createAccount.submitButton')}
-          </Text>
+          {isLoading ? (
+            <ActivityIndicator color="#F9F5F0" />
+          ) : (
+            <Text style={styles.createButtonText}>
+              {t('createAccount.submitButton')}
+            </Text>
+          )}
         </TouchableOpacity>
-        
         <Text style={styles.termsText}>
           {t('createAccount.terms')}
         </Text>
@@ -200,6 +134,7 @@ export default function CreateAccountScreen() {
   );
 }
 
+// Les styles restent inchangés, à part la suppression de ceux liés aux boutons de choix
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -213,7 +148,6 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(139, 115, 85, 0.08)',
-    backgroundColor: 'rgba(249, 245, 240, 0.98)',
   },
   backButton: {
     padding: 8,
@@ -223,83 +157,50 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontFamily: 'Quicksand-Medium',
     color: '#4D3B2F',
-    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 12,
-    fontFamily: 'Quicksand-Light',
+    fontSize: 13,
+    fontFamily: 'Quicksand-Regular',
     color: '#8B7355',
     fontStyle: 'italic',
+    marginTop: 2,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
   section: {
-    marginTop: 25,
-    marginBottom: 20,
+    marginTop: 30,
   },
-  sectionTitle: {
+  inputLabel: {
     fontSize: 16,
     fontFamily: 'Quicksand-Medium',
     color: '#4D3B2F',
-    marginBottom: 15,
-  },
-  contactTypeButtons: {
-    flexDirection: 'row',
-    gap: 15,
-  },
-  contactTypeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: 'rgba(139, 115, 85, 0.2)',
-  },
-  activeContactTypeButton: {
-    backgroundColor: '#8B7355',
-    borderColor: '#8B7355',
-  },
-  contactTypeText: {
-    fontSize: 14,
-    fontFamily: 'Quicksand-Medium',
-    color: '#8B7355',
-    marginLeft: 8,
-  },
-  activeContactTypeText: {
-    color: '#F9F5F0',
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontFamily: 'Quicksand-Medium',
-    color: '#4D3B2F',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   inputHint: {
-    fontSize: 11,
-    fontFamily: 'Quicksand-Light',
+    fontSize: 12,
+    fontFamily: 'Quicksand-Regular',
     color: '#8B7355',
     fontStyle: 'italic',
     marginBottom: 12,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 15,
     borderWidth: 1,
     borderColor: 'rgba(139, 115, 85, 0.15)',
     paddingHorizontal: 16,
-    paddingVertical: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   inputIcon: {
     marginRight: 12,
@@ -310,79 +211,58 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Quicksand-Regular',
     color: '#4D3B2F',
-    paddingVertical: 14,
+    paddingVertical: 16,
   },
-  infoSection: {
-    backgroundColor: 'rgba(139, 115, 85, 0.08)',
+  demoNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(251, 191, 36, 0.1)',
     borderRadius: 15,
-    padding: 20,
-    marginVertical: 20,
+    padding: 15,
+    marginTop: 30,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 119, 6, 0.2)',
   },
-  infoTitle: {
+  demoNoticeTextContainer: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  demoNoticeTitle: {
     fontSize: 14,
     fontFamily: 'Quicksand-Medium',
-    color: '#4D3B2F',
-    marginBottom: 12,
+    color: '#92400E',
+    marginBottom: 4,
   },
-  infoText: {
+  demoNoticeText: {
     fontSize: 12,
     fontFamily: 'Quicksand-Regular',
-    color: '#8B7355',
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-  ethicsSection: {
-    marginVertical: 20,
-  },
-  ethicsTitle: {
-    fontSize: 16,
-    fontFamily: 'Quicksand-Medium',
-    color: '#4D3B2F',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  ethicsItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  ethicsEmoji: {
-    fontSize: 16,
-    marginRight: 12,
-    marginTop: 2,
-  },
-  ethicsText: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: 'Quicksand-Regular',
-    color: '#8B7355',
+    color: '#B45309',
     lineHeight: 18,
   },
   footer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 25,
-    backgroundColor: 'rgba(249, 245, 240, 0.98)',
+    paddingBottom: 40,
+    backgroundColor: 'rgba(249, 245, 240, 0.95)',
     borderTopWidth: 1,
     borderTopColor: 'rgba(139, 115, 85, 0.08)',
   },
   createButton: {
-    backgroundColor: '#8B7355',
+    backgroundColor: '#687fb2',
     paddingVertical: 18,
     borderRadius: 30,
     alignItems: 'center',
     marginBottom: 15,
-    shadowColor: '#4D3B2F',
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowColor: '#687fb2',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
     elevation: 8,
   },
   disabledButton: {
-    backgroundColor: '#B8A082',
-    opacity: 0.6,
+    backgroundColor: '#a0a8b0',
+    shadowColor: 'transparent',
+    elevation: 0,
   },
   createButtonText: {
     fontSize: 16,
@@ -391,11 +271,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   termsText: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: 'Quicksand-Light',
     color: '#8B7355',
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 16,
     fontStyle: 'italic',
   },
 });

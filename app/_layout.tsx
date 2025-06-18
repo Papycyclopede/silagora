@@ -1,9 +1,10 @@
-// app/_layout.tsx
+// app/_layout.tsx (corrigé)
+
 import 'intl-pluralrules';
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useFrameworkReady } from '@/hooks/useFrameworkReady'; // Assurez-vous que ce hook est correct
+import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts } from 'expo-font';
 import {
   Satisfy_400Regular,
@@ -20,25 +21,29 @@ import { AudioProvider } from '@/contexts/AudioContext';
 import { LocationProvider } from '@/contexts/LocationContext';
 import { SouffleProvider } from '@/contexts/SouffleContext';
 
-// Prevent splash screen from auto-hiding
+// Empêche le splash screen de se masquer automatiquement
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useFrameworkReady();
 
+  // Chargement des polices pour l'application
   const [fontsLoaded, fontError] = useFonts({
     'Satisfy-Regular': Satisfy_400Regular,
     'Quicksand-Light': Quicksand_300Light,
-    'Quicksland-Regular': Quicksand_400Regular, // Correction possible typo Quicksland -> Quicksand
+    // --- CORRECTION APPLIQUÉE ICI ---
+    'Quicksand-Regular': Quicksand_400Regular, // 'Quicksland' a été corrigé en 'Quicksand'
     'Quicksand-Medium': Quicksand_500Medium,
   });
 
   useEffect(() => {
+    // Masque l'écran de démarrage une fois que les polices sont chargées (ou en cas d'erreur)
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
+  // N'affiche rien tant que les polices ne sont pas prêtes
   if (!fontsLoaded && !fontError) {
     return null;
   }
@@ -49,10 +54,9 @@ export default function RootLayout() {
         <AudioProvider>
           <LocationProvider>
             <SouffleProvider>
-              {/* Le +initial.tsx (votre splash screen) doit être ici pour accéder aux contextes */}
+              {/* Le Stack Navigator principal de l'application */}
               <Stack screenOptions={{ headerShown: false }}>
-                {/* L'écran d'initialisation est désormais une route normale dans la stack */}
-                <Stack.Screen name="_initial" /> {/* S'assure que _initial est le premier écran */}
+                <Stack.Screen name="_initial" />
                 <Stack.Screen name="(auth)" />
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="+not-found" />

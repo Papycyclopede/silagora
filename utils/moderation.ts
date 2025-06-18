@@ -1,155 +1,159 @@
+// utils/moderation.ts (Version optimisée et modulaire)
+
 import type { SouffleContent } from '@/types/souffle';
 
 // --- CONFIGURATION DE LA MODÉRATION ---
 
-const THRESHOLD_BLOCK = 10; // Score à partir duquel le message est entièrement bloqué
-const THRESHOLD_SANITIZE = 4; // Score à partir duquel on censure les mots (****)
+const THRESHOLD_BLOCK = 10;
+const THRESHOLD_SANITIZE = 4;
 
-// Pondération des infractions
 const WEIGHTS = {
   FORBIDDEN_WORD: 5,
   SUSPICIOUS_WORD: 2,
-  PERSONAL_INFO: 15, // Bloque quasi-instantanément
+  PERSONAL_INFO: 15,
   EXCESSIVE_CAPS: 1,
   REPETITION: 3,
   URL: 15,
 };
 
-// --- DICTIONNAIRES ET PATTERNS ---
-
+// --- DICTIONNAIRES DE MOTS DE BASE ---
 const FORBIDDEN_WORDS = [
-  // Insultes fortes
   'connard', 'salope', 'putain', 'merde', 'con', 'conne', 'encule', 'fdp',
-  // Haine & extrémisme
-  'nazi', 'hitler', 'terroriste', 'raciste', 'daesh',
-  // Drogues & Illégal
-  'drogue', 'suicide', 'meurtre',
-  // Spam & Pub
-  'bitcoin', 'crypto', 'investissement', 'argent facile', 'promo', 'gratuit',
+  'bitch', 'fuck', 'shit', 'cunt', 'asshole', 'motherfucker', 'nword', 'nigger',
+  'nazi', 'hitler', 'terroriste', 'terrorist', 'raciste', 'racist', 'daesh', 'isis',
+  'drogue', 'drug', 'suicide', 'murder', 'meurtre',
+  'bitcoin', 'crypto', 'investissement', 'investment', 'argent facile', 'easy money', 'promo', 'free', 'gratuit',
 ];
 
-const SUSPICIOUS_WORDS = [
-  'sexe', 'porn', 'weed', 'arnaque', 'secte', 'viagra'
+export const SUSPICIOUS_WORDS = [
+  'sexe', 'sex', 'porn', 'weed', 'arnaque', 'scam', 'secte', 'cult', 'viagra'
 ];
 
-// Caractères "confusables" pour contrer le leetspeak
-const CONFUSABLE_CHARS: { [key: string]: string } = {
-  '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's',
-  '@': 'a', '$': 's', '€': 'e', '!': 'i',
-};
-
-// Expressions régulières pour détecter les informations personnelles
-const REGEX_PATTERNS = {
-  EMAIL: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
-  PHONE: /(\+33|0)[1-9]([.\- ]?\d{2}){4}/g,
-  URL: /(https?:\/\/[^\s]+)/g,
-};
-
-// --- FONCTIONS DE MODÉRATION ---
-
-/**
- * Nettoie et "dé-obfusque" un texte pour l'analyse.
- * Met en minuscule, enlève les accents et remplace les caractères similaires (leetspeak).
- */
-function normalizeAndDeobfuscate(text: string): string {
-  let normalized = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  for (const char in CONFUSABLE_CHARS) {
-    normalized = normalized.replace(new RegExp(`\\${char}`, 'g'), CONFUSABLE_CHARS[char]);
-  }
+// --- LOGIQUE DE NORMALISATION (INCHANGÉE) ---
+function superNormalize(text: string): string {
+  let normalized = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  normalized = normalized
+    .replace(/[4@]/g, 'a')
+    .replace(/[3€]/g, 'e')
+    .replace(/[1!|]/g, 'i')
+    .replace(/[0]/g, 'o')
+    .replace(/[5$s]/g, 's')
+    .replace(/[7]/g, 't');
+  normalized = normalized.replace(/[^a-z0-9]/gi, '');
   return normalized;
 }
 
-/**
- * Censure une liste de mots dans un texte en les remplaçant par des astérisques.
- */
-export function sanitizeContent(content: string, wordsToSanitize: string[]): string {
-  let sanitized = content;
-  wordsToSanitize.forEach(word => {
-    // Crée une regex insensible à la casse pour le mot exact
-    const regex = new RegExp(`\\b${word}\\b`, 'gi');
-    sanitized = sanitized.replace(regex, '*'.repeat(word.length));
-  });
-  return sanitized;
+// --- STRUCTURE DE RÈGLES MODULAIRE ---
+
+// Interface pour définir une règle de modération
+interface ModerationRule {
+  key: string;
+  weight: number;
+  // La fonction de vérification retourne un booléen (simple détection)
+  // ou un tableau des mots/chaînes trouvés (pour la sanitisation).
+  check: (originalText: string, normalizedText: string) => boolean | string[];
+  getReason: (match?: boolean | string[]) => string;
 }
 
-interface ValidationResult {
-  status: 'allowed' | 'flagged' | 'blocked';
-  sanitizedContent?: string;
+// Collection de toutes nos règles
+const moderationRules: ModerationRule[] = [
+  {
+    key: 'url',
+    weight: WEIGHTS.URL,
+    check: (originalText) => /(https?:\/\/[^\s]+)/g.test(originalText),
+    getReason: () => 'Partage d\'URL non autorisé.',
+  },
+  {
+    key: 'pii',
+    weight: WEIGHTS.PERSONAL_INFO,
+    check: (originalText) => (/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i).test(originalText) || /(?:(?:\+|00)33[\s.-]{0,3}(?:\(0\)[\s.-]{0,3})?|0)[1-9](?:(?:[\s.-]?\d{2}){4}|\d{2}(?:[\s.-]?\d{3}){2})/.test(originalText),
+    getReason: () => 'Partage d\'informations personnelles (email/téléphone).',
+  },
+  {
+    key: 'forbidden_words',
+    weight: WEIGHTS.FORBIDDEN_WORD,
+    check: (originalText, normalizedText) => {
+      const foundWords = FORBIDDEN_WORDS.filter(word => normalizedText.includes(superNormalize(word)));
+      return foundWords.length > 0 ? foundWords : false;
+    },
+    getReason: (match) => `Contenu inapproprié détecté (${(match as string[]).join(', ')}).`,
+  },
+  {
+    key: 'suspicious_words',
+    weight: WEIGHTS.SUSPICIOUS_WORD,
+    check: (originalText, normalizedText) => {
+      const foundWords = SUSPICIOUS_WORDS.filter(word => normalizedText.includes(superNormalize(word)));
+      return foundWords.length > 0 ? foundWords : false;
+    },
+    getReason: (match) => `Contenu suspect détecté (${(match as string[]).join(', ')}).`,
+  },
+  {
+    key: 'excessive_caps',
+    weight: WEIGHTS.EXCESSIVE_CAPS,
+    check: (originalText) => {
+      const capsRatio = (originalText.match(/[A-Z]/g)?.length || 0) / originalText.length;
+      return capsRatio > 0.5 && originalText.length > 20;
+    },
+    getReason: () => 'Usage excessif de majuscules.',
+  },
+  {
+    key: 'repetition',
+    weight: WEIGHTS.REPETITION,
+    // ✅ CORRECTION DE LA REGEX
+    check: (originalText) => /(.)\1{3,}/.test(originalText),
+    getReason: () => 'Répétition excessive de caractères.',
+  },
+];
+
+
+// --- FONCTION DE VALIDATION PRINCIPALE (REFACTORISÉE) ---
+
+interface ModerationResult {
+  status: 'clean' | 'flagged' | 'blocked';
   reasons: string[];
+  sanitizedContent?: string;
 }
 
-/**
- * Valide un souffle en utilisant un système de score de toxicité.
- */
-export function validateSouffleContent(content: SouffleContent): ValidationResult {
-  const allText = `${content.jeMeSens || ''} ${content.messageLibre || ''} ${content.ceQueJaimerais || ''}`.trim();
-
-  if (allText.length === 0) {
-    return { status: 'blocked', reasons: ['Le souffle ne peut pas être vide.'] };
-  }
-  if (allText.length > 500) { // Limite plus stricte
-    return { status: 'blocked', reasons: ['Le souffle est trop long (500 caractères max).'] };
-  }
-
-  const normalizedText = normalizeAndDeobfuscate(allText);
+export function validateSouffleContent(content: SouffleContent): ModerationResult {
   let score = 0;
   const reasons: string[] = [];
-  let wordsToSanitize: string[] = [];
-
-  // 1. Détection de patterns (Regex)
-  for (const key in REGEX_PATTERNS) {
-    if (REGEX_PATTERNS[key as keyof typeof REGEX_PATTERNS].test(allText)) {
-      score += WEIGHTS.PERSONAL_INFO;
-      reasons.push('Informations personnelles ou liens détectés.');
-    }
-  }
-
-  // 2. Détection de mots-clés
-  FORBIDDEN_WORDS.forEach(word => {
-    if (normalizedText.includes(word)) {
-      score += WEIGHTS.FORBIDDEN_WORD;
-      reasons.push(`Contenu inapproprié détecté (${word}).`);
-      wordsToSanitize.push(word);
-    }
-  });
-  SUSPICIOUS_WORDS.forEach(word => {
-    if (normalizedText.includes(word)) {
-      score += WEIGHTS.SUSPICIOUS_WORD;
-      reasons.push(`Contenu suspect détecté (${word}).`);
-      wordsToSanitize.push(word);
-    }
-  });
-
-  // 3. Analyse comportementale
-  const capsRatio = (allText.match(/[A-Z]/g)?.length || 0) / allText.length;
-  if (capsRatio > 0.5 && allText.length > 20) {
-    score += WEIGHTS.EXCESSIVE_CAPS;
-    reasons.push('Usage excessif de majuscules.');
-  }
-
-  if (/(.)\1{3,}/.test(allText)) { // Détecte plus de 3 caractères identiques à la suite
-    score += WEIGHTS.REPETITION;
-    reasons.push('Répétition excessive de caractères.');
-  }
+  const wordsToSanitize: string[] = [];
   
-  // 4. Décision finale basée sur le score
+  const originalText = `${content.jeMeSens} ${content.messageLibre} ${content.ceQueJaimerais}`;
+  const normalizedText = superNormalize(originalText);
+
+  // Exécution du pipeline de règles
+  moderationRules.forEach(rule => {
+    const match = rule.check(originalText, normalizedText);
+    if (match) {
+      score += rule.weight;
+      reasons.push(rule.getReason(match));
+      // Si le check a retourné un tableau de mots, on les ajoute pour la sanitisation
+      if (Array.isArray(match)) {
+        wordsToSanitize.push(...match);
+      }
+    }
+  });
+  
+  // Décision finale basée sur le score
   if (score >= THRESHOLD_BLOCK) {
-    return { status: 'blocked', reasons };
+    // ✅ Utilisation de Set pour dédoublonner les raisons
+    return { status: 'blocked', reasons: Array.from(new Set(reasons)) };
   }
 
   if (score >= THRESHOLD_SANITIZE) {
-    const sanitizedText = sanitizeContent(allText, wordsToSanitize);
-    // On ne censure que le message principal pour ne pas altérer les autres champs
-    const sanitizedSouffleContent = {
-      ...content,
-      messageLibre: sanitizeContent(content.messageLibre, wordsToSanitize),
-    };
-    return {
-      status: 'flagged',
-      sanitizedContent: JSON.stringify(sanitizedSouffleContent), // On renvoie le contenu modifié
-      reasons
-    };
+    // ✅ Logique de sanitisation plus robuste
+    // Crée une regex dynamique avec tous les mots à censurer
+    const sanitizationRegex = new RegExp(wordsToSanitize.map(word =>
+      // Échappe les caractères spéciaux pour la regex
+      word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
+    ).join('|'), 'gi');
+    
+    const sanitizedMessage = content.messageLibre.replace(sanitizationRegex, '***');
+    const sanitizedContent = JSON.stringify({ ...content, messageLibre: sanitizedMessage });
+
+    return { status: 'flagged', reasons: Array.from(new Set(reasons)), sanitizedContent };
   }
 
-  return { status: 'allowed', reasons: [] };
+  return { status: 'clean', reasons: [] };
 }

@@ -6,19 +6,20 @@ import {
   ScrollView,
   TouchableOpacity,
   Linking,
+  ImageBackground, // --- MODIFICATION 1: Importer ImageBackground
 } from 'react-native';
 import { Heart, MapPin, Clock, Shield, Mail, Github, ExternalLink } from 'lucide-react-native';
-import { useLanguage } from '@/contexts/LanguageContext'; // Ajouté
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function AboutScreen() {
-  const { t } = useLanguage(); // Ajouté
+  const { t } = useLanguage();
 
   const openLink = (url: string) => {
     Linking.openURL(url);
   };
 
-  return (
-    <View style={styles.container}>
+  const MainContent = () => (
+    <>
       {/* Header aquarelle */}
       <View style={styles.header}>
         <Text style={styles.title}>{t('about.title')}</Text>
@@ -156,21 +157,38 @@ export default function AboutScreen() {
           <Text style={styles.versionSubtext}>{t('about.hackathonCredit')}</Text>
         </View>
       </ScrollView>
-    </View>
+    </>
+  );
+
+  return (
+    // --- MODIFICATION 2: Utiliser ImageBackground comme composant racine ---
+    <ImageBackground
+      source={require('../../assets/images/fond.png')}
+      style={styles.backgroundImage}
+    >
+      <View style={styles.container}>
+        <MainContent />
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  // --- MODIFICATION 3: Styles pour ImageBackground et conteneur transparent ---
+  backgroundImage: {
+    flex: 1,
+    resizeMode: 'cover',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F9F7F4',
+    backgroundColor: 'transparent', // Le fond solide est retiré
   },
   header: {
     paddingHorizontal: 24,
     paddingVertical: 20,
     paddingTop: 60,
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: 'transparent', // En-tête rendu transparent
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(139, 125, 107, 0.08)',
   },

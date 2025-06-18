@@ -1,3 +1,5 @@
+// utils/echoSimulation.ts
+
 import type { EchoPlace, Souffle } from '@/types/souffle';
 import { calculateDistance } from '@/utils/distance';
 
@@ -5,234 +7,141 @@ export interface EchoTrail {
   id: string;
   fromPlaceId: string;
   toPlaceId: string;
-  intensity: number; // 0-1, pour l'opacité
-  isActive: boolean;
-  lastActivity: Date;
-  emotionalResonance?: string; // Type de résonance émotionnelle
 }
 
 export interface EnhancedEchoPlace extends EchoPlace {
   intensity: 'murmure' | 'echo' | 'sanctuaire';
-  colorTheme: string; // Couleur aquarelle
-  connectedTrails: string[];
-  emotionalSignature?: string; // Signature émotionnelle dominante
-  lastVisited?: Date;
+  colorTheme: string;
+  poeticEmote: string;
 }
 
-// Noms simples et poétiques pour les lieux d'écho
 const SIMPLE_PLACE_NAMES = [
-  'Jardin des Murmures',
-  'Carrefour Silencieux',
-  'Alcôve Secrète',
-  'Refuge Tranquille',
-  'Bosquet Paisible',
-  'Clairière Douce',
-  'Coin Contemplatif',
-  'Havre de Paix',
-  'Nid de Pensées',
-  'Sanctuaire Discret',
-  'Oasis Cachée',
-  'Retraite Sereine',
-  'Abri Poétique',
-  'Enclave Mystérieuse',
-  'Théâtre Intime'
+  'Jardin des Murmures', 'Carrefour Silencieux', 'Alcôve Secrète', 'Refuge Tranquille',
+  'Bosquet Paisible', 'Clairière Douce', 'Coin Contemplatif', 'Havre de Paix'
 ];
+const PLACE_COLORS = [ '#A8C8E1', '#B8E6B8', '#F4E4BC', '#D4A574', '#E6A8A8' ];
+const SIMULATION_RADIUS = 500; // Rayon de recherche des souffles autour de l'utilisateur
+const CLUSTER_RADIUS = 150; // Rayon pour former un cluster de souffles
 
-// Couleurs douces pour les lieux d'écho
-const PLACE_COLORS = [
-  '#A8C8E1', // Bleu doux
-  '#B8E6B8', // Vert tendre
-  '#F4E4BC', // Beige chaud
-  '#E6C8A8', // Sable
-  '#D4A574', // Ocre
-  '#C8D4E6', // Lavande
-  '#F0C8E6', // Rose pâle
-  '#E6A8A8', // Corail doux
-];
+const POETIC_EMOTES_MAP: Record<EnhancedEchoPlace['intensity'], string[]> = {
+  'murmure': ['🌳', '🏡', '🗺️', '📍'],
+  'echo': ['🏛️', '🏞️', '🌉', '🌌'],
+  'sanctuaire': ['🏰', '🌌'],
+};
 
-// Résonances émotionnelles pour les sentiers
-const EMOTIONAL_RESONANCES = [
-  'mélancolie-nostalgie',
-  'optimisme',
-  'paix-intérieure',
-  'douceur-amère',
-  'enthousiasme'
-];
+/**
+ * Simule la création de "lieux d'écho" (places) et de "courants poétiques" (trails)
+ * basés sur la densité des souffles à proximité de l'utilisateur.
+ * Cet algorithme de clustering est optimisé pour éviter les performances dégradées
+ * lors de l'activation de la simulation.
+ *
+ * @param souffles La liste de tous les souffles actifs.
+ * @param userLatitude La latitude actuelle de l'utilisateur.
+ * @param userLongitude La longitude actuelle de l'utilisateur.
+ * @returns Un objet contenant les lieux d'écho améliorés et les sentiers entre eux (les sentiers sont actuellement désactivés dans la carte pour des raisons de performance).
+ */
+export function generateEchoes(
+  souffles: Souffle[],
+  userLatitude: number,
+  userLongitude: number
+): { places: EnhancedEchoPlace[]; trails: EchoTrail[] } {
+  // 1. Filtrer les souffles à proximité de l'utilisateur
+  const nearbySouffles = souffles.filter(s =>
+    calculateDistance(userLatitude, userLongitude, s.latitude, s.longitude) <= SIMULATION_RADIUS
+  );
 
-export class EchoSimulation {
-  private static instance: EchoSimulation;
-  private simulatedPlaces: EnhancedEchoPlace[] = [];
-  private simulatedTrails: EchoTrail[] = [];
-  private isSimulationActive = false;
+  const clusters: Souffle[][] = [];
+  const assignedToCluster = new Set<string>(); // Pour garder une trace des souffles déjà assignés à un cluster
 
-  static getInstance(): EchoSimulation {
-    if (!EchoSimulation.instance) {
-      EchoSimulation.instance = new EchoSimulation();
-    }
-    return EchoSimulation.instance;
-  }
-
-  // Génère des lieux d'écho simples autour de la position
-  generateSimulatedEchoPlaces(
-    centerLat: number, 
-    centerLon: number, 
-    radius: number = 2000
-  ): EnhancedEchoPlace[] {
-    const places: EnhancedEchoPlace[] = [];
-    const placeCount = Math.floor(Math.random() * 6) + 4; // 4-9 lieux
-
-    for (let i = 0; i < placeCount; i++) {
-      // Position aléatoire dans le rayon
-      const angle = Math.random() * 2 * Math.PI;
-      const distance = Math.random() * radius;
-      
-      const lat = centerLat + (distance * Math.cos(angle)) / 111320;
-      const lon = centerLon + (distance * Math.sin(angle)) / (111320 * Math.cos(centerLat * Math.PI / 180));
-
-      const souffleCount = Math.floor(Math.random() * 15) + 3;
-      const intensity = souffleCount < 5 ? 'murmure' : souffleCount < 10 ? 'echo' : 'sanctuaire';
-      const colorTheme = PLACE_COLORS[Math.floor(Math.random() * PLACE_COLORS.length)];
-      
-      const place: EnhancedEchoPlace = {
-        id: `sim_echo_${i}`,
-        name: SIMPLE_PLACE_NAMES[Math.floor(Math.random() * SIMPLE_PLACE_NAMES.length)],
-        latitude: lat,
-        longitude: lon,
-        souffleCount,
-        description: this.generateSimpleDescription(intensity, souffleCount),
-        intensity,
-        colorTheme,
-        connectedTrails: [],
-        emotionalSignature: this.generateEmotionalSignature(),
-      };
-
-      places.push(place);
+  // 2. Regrouper les souffles à proximité en clusters (approche BFS-like)
+  for (const currentSouffle of nearbySouffles) {
+    // Si le souffle a déjà été assigné à un cluster, on le saute
+    if (assignedToCluster.has(currentSouffle.id)) {
+      continue;
     }
 
-    this.simulatedPlaces = places;
-    return places;
-  }
+    const newCluster: Souffle[] = [];
+    const queue: Souffle[] = [currentSouffle]; // Queue pour la recherche en largeur
+    assignedToCluster.add(currentSouffle.id); // Marque le souffle actuel comme assigné
 
-  // Génère des sentiers simples entre les lieux
-  generateSimpleTrails(places: EnhancedEchoPlace[]): EchoTrail[] {
-    const trails: EchoTrail[] = [];
+    let head = 0;
+    while (head < queue.length) {
+      const referenceSouffle = queue[head++]; // Prend le souffle de référence de la queue
 
-    places.forEach((place, index) => {
-      // Connecter chaque lieu à 1-2 autres lieux proches
-      const connectionCount = Math.floor(Math.random() * 2) + 1;
-      const nearbyPlaces = places
-        .filter((other, otherIndex) => otherIndex !== index)
-        .map(other => ({
-          place: other,
-          distance: calculateDistance(
-            place.latitude,
-            place.longitude,
-            other.latitude,
-            other.longitude
-          )
-        }))
-        .sort((a, b) => a.distance - b.distance)
-        .slice(0, connectionCount);
+      newCluster.push(referenceSouffle); // Ajoute le souffle de référence au nouveau cluster
 
-      nearbyPlaces.forEach(({ place: targetPlace, distance }) => {
-        // Éviter les doublons
-        const existingTrail = trails.find(trail => 
-          (trail.fromPlaceId === place.id && trail.toPlaceId === targetPlace.id) ||
-          (trail.fromPlaceId === targetPlace.id && trail.toPlaceId === place.id)
-        );
-
-        if (!existingTrail && distance < 1200) { // Seulement si < 1.2km
-          const trail: EchoTrail = {
-            id: `trail_${place.id}_${targetPlace.id}`,
-            fromPlaceId: place.id,
-            toPlaceId: targetPlace.id,
-            intensity: Math.random() * 0.6 + 0.3, // Entre 0.3 et 0.9
-            isActive: Math.random() > 0.4, // 60% de chance d'être actif
-            lastActivity: new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000),
-            emotionalResonance: EMOTIONAL_RESONANCES[Math.floor(Math.random() * EMOTIONAL_RESONANCES.length)]
-          };
-
-          trails.push(trail);
+      // Parcourt tous les souffles à proximité pour trouver ceux qui sont proches du souffle de référence
+      for (const candidateSouffle of nearbySouffles) {
+        if (!assignedToCluster.has(candidateSouffle.id) &&
+            calculateDistance(referenceSouffle.latitude, referenceSouffle.longitude, candidateSouffle.latitude, candidateSouffle.longitude) <= CLUSTER_RADIUS) {
           
-          // Ajouter la référence dans les lieux
-          place.connectedTrails.push(trail.id);
-          targetPlace.connectedTrails.push(trail.id);
+          assignedToCluster.add(candidateSouffle.id); // Marque le candidat comme assigné
+          queue.push(candidateSouffle); // Ajoute le candidat à la queue pour explorer ses voisins
         }
-      });
-    });
-
-    this.simulatedTrails = trails;
-    return trails;
-  }
-
-  // Active la simulation complète
-  activateSimulation(centerLat: number, centerLon: number): {
-    places: EnhancedEchoPlace[];
-    trails: EchoTrail[];
-  } {
-    console.log('🌟 Activation de la simulation des lieux d\'écho');
+      }
+    }
     
-    const places = this.generateSimulatedEchoPlaces(centerLat, centerLon);
-    const trails = this.generateSimpleTrails(places);
-    
-    this.isSimulationActive = true;
-    
-    console.log(`✨ ${places.length} lieux d'écho générés`);
-    console.log(`🌊 ${trails.length} sentiers créés`);
-    
-    return { places, trails };
+    // Ajoute le cluster formé si il contient au moins un souffle
+    if (newCluster.length > 0) {
+        clusters.push(newCluster);
+    }
   }
 
-  // Désactive la simulation
-  deactivateSimulation(): void {
-    this.simulatedPlaces = [];
-    this.simulatedTrails = [];
-    this.isSimulationActive = false;
-    console.log('🔄 Simulation désactivée');
-  }
+  // 3. Création des lieux d'écho à partir des clusters formés
+  const echoPlaces: EchoPlace[] = clusters.map((cluster, index) => {
+    // Calculer le centre moyen du cluster
+    let avgLat = 0;
+    let avgLon = 0;
+    for (const s of cluster) {
+      avgLat += s.latitude;
+      avgLon += s.longitude;
+    }
+    avgLat /= cluster.length;
+    avgLon /= cluster.length;
 
-  // Getters pour accéder aux données simulées
-  getSimulatedPlaces(): EnhancedEchoPlace[] {
-    return this.simulatedPlaces;
-  }
-
-  getSimulatedTrails(): EchoTrail[] {
-    return this.simulatedTrails;
-  }
-
-  isActive(): boolean {
-    return this.isSimulationActive;
-  }
-
-  // Méthodes privées pour la génération
-  private generateSimpleDescription(intensity: string, souffleCount: number): string {
-    const descriptions = {
-      'murmure': [
-        'Un lieu discret où quelques voix se mêlent',
-        'Petit carrefour de confidences',
-        'Coin tranquille de partage'
-      ],
-      'echo': [
-        'Lieu de rencontres et d\'échanges',
-        'Carrefour vivant de la communauté',
-        'Point de convergence apprécié'
-      ],
-      'sanctuaire': [
-        'Lieu très fréquenté et apprécié',
-        'Carrefour majeur de la communauté',
-        'Point de rassemblement privilégié'
-      ]
+    return {
+      id: `echo_${index}_${Date.now()}`, // Identifiant unique pour le lieu d'écho
+      name: SIMPLE_PLACE_NAMES[Math.floor(Math.random() * SIMPLE_PLACE_NAMES.length)],
+      latitude: avgLat,
+      longitude: avgLon,
+      souffleCount: cluster.length,
     };
+  }).filter(place => place.souffleCount >= 2); // Un lieu d'écho doit avoir au moins 2 souffles
 
-    const baseDesc = descriptions[intensity as keyof typeof descriptions];
-    return `${baseDesc[Math.floor(Math.random() * baseDesc.length)]} (${souffleCount} souffles)`;
+  // 4. Amélioration des lieux d'écho avec intensité et émoticônes
+  const enhancedPlaces: EnhancedEchoPlace[] = echoPlaces.map((place, index) => {
+    // Déterminer l'intensité du lieu d'écho en fonction du nombre de souffles
+    const intensity: EnhancedEchoPlace['intensity'] =
+      place.souffleCount >= 10 ? 'sanctuaire' : place.souffleCount >= 5 ? 'echo' : 'murmure';
+
+    // Sélectionner une émoticône poétique basée sur l'intensité
+    const availableEmotes = POETIC_EMOTES_MAP[intensity];
+    const selectedEmote = availableEmotes[Math.floor(Math.random() * availableEmotes.length)];
+
+    return {
+      ...place,
+      intensity: intensity,
+      colorTheme: PLACE_COLORS[index % PLACE_COLORS.length], // Attribue une couleur cycliquement
+      poeticEmote: selectedEmote,
+    };
+  });
+
+  // 5. Création des sentiers (trails) entre les lieux d'écho proches (actuellement non rendus sur la carte)
+  const trails: EchoTrail[] = [];
+  if (enhancedPlaces.length > 1) {
+    for (let i = 0; i < enhancedPlaces.length; i++) {
+      for (let j = i + 1; j < enhancedPlaces.length; j++) {
+        // Crée un trail si les lieux d'écho sont suffisamment proches
+        if (calculateDistance(enhancedPlaces[i].latitude, enhancedPlaces[i].longitude, enhancedPlaces[j].latitude, enhancedPlaces[j].longitude) < SIMULATION_RADIUS / 2) {
+            trails.push({
+                id: `trail_${enhancedPlaces[i].id}_${enhancedPlaces[j].id}`,
+                fromPlaceId: enhancedPlaces[i].id,
+                toPlaceId: enhancedPlaces[j].id,
+            });
+        }
+      }
+    }
   }
 
-  private generateEmotionalSignature(): string {
-    const emotions = [
-      'mélancolique', 'joyeux', 'serein', 'nostalgique', 
-      'contemplatif', 'inspirant', 'apaisant', 'énergisant'
-    ];
-    return emotions[Math.floor(Math.random() * emotions.length)];
-  }
+  return { places: enhancedPlaces, trails };
 }

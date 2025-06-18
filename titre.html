@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Silagora – Animation fluide (Épaisseur affinée)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Satisfy&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      background: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+    }
+
+    svg text {
+      font-family: 'Satisfy', cursive;
+      font-size: 80px;
+      fill: #687fb2; /* Couleur de remplissage du titre */
+      fill-opacity: 0;
+      stroke: #687fb2; /* Couleur du tracé du titre */
+      stroke-width: 1; /* CHANGEMENT ICI: Épaisseur du trait réduite à 1 */
+      stroke-dasharray: 1000;
+      stroke-dashoffset: 1000;
+      animation:
+        draw 2s ease-in forwards,
+        fadein 1s ease-out 1.5s forwards;
+    }
+
+    @keyframes draw {
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    @keyframes fadein {
+      to {
+        fill-opacity: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <svg width="600" height="150" viewBox="0 0 600 150">
+    <text x="50" y="100">Silagora</text>
+  </svg>
+</body>
+</html>

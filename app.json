@@ -23,6 +23,8 @@
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
       "package": "com.anonymous.Silagora"
@@ -40,6 +42,16 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c6feca0b-9912-41f0-936f-7916fbb9800b"
+      }
+    },
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/c6feca0b-9912-41f0-936f-7916fbb9800b"
     }
   }
 }

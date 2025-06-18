@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing } from 'react-native';
+// CORRECTION : Ajout de 'View' à la liste des imports
+import { Animated, Easing, View } from 'react-native';
 
 interface AnimatedHaloProps {
   children: React.ReactNode;
@@ -16,12 +17,10 @@ export function AnimatedHalo({
 }: AnimatedHaloProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0.7)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (canReveal && !isRevealed) {
-      // Animation de pulsation pour les souffles révélables
       const pulseAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -41,24 +40,10 @@ export function AnimatedHalo({
       pulseAnimation.start();
       
       return () => pulseAnimation.stop();
-    } else if (isActive) {
-      // Animation de rotation douce pour les éléments actifs
-      const rotateAnimation = Animated.loop(
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 8000,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        })
-      );
-      rotateAnimation.start();
-      
-      return () => rotateAnimation.stop();
-    }
+    } 
   }, [isActive, canReveal, isRevealed]);
 
   useEffect(() => {
-    // Animation d'apparition
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -74,17 +59,11 @@ export function AnimatedHalo({
     ]).start();
   }, []);
 
-  const rotation = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
   return (
     <Animated.View
       style={{
         transform: [
           { scale: canReveal ? pulseAnim : scaleAnim },
-          { rotate: isActive ? rotation : '0deg' },
         ],
         opacity: opacityAnim,
       }}
@@ -221,7 +200,7 @@ export function WaveEffect({ isActive, children }: WaveEffectProps) {
   });
 
   return (
-    <Animated.View style={{ alignItems: 'center', justifyContent: 'center' }}>
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
       {isActive && (
         <>
           <Animated.View style={createWaveStyle(wave1)} />
@@ -230,6 +209,6 @@ export function WaveEffect({ isActive, children }: WaveEffectProps) {
         </>
       )}
       {children}
-    </Animated.View>
+    </View>
   );
 }

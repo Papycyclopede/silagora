@@ -1,232 +1,193 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
-import type { Souffle, CreateSouffleData, EchoPlace, SouffleStats, SuspendedTicket } from '@/types/souffle';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { supabase } from '@/utils/supabaseClient';
+import type { Souffle, CreateSouffleData, SuspendedTicket } from '@/types/souffle';
 import { useLocation } from './LocationContext';
 import { useAuth } from './AuthContext';
 import { SouffleStorage } from '@/utils/storage';
-import { generateInitialSouffleBatch, generateRandomSouffle, generatePoeticalPlaceName } from '@/utils/souffleSimulator';
-import { calculateDistance } from '@/utils/distance';
+import { useAnalytics } from '@/hooks/useAnalytics';
+import { validateSouffleContent } from '@/utils/moderation';
 
 interface SouffleContextType {
   souffles: Souffle[];
-  echoPlaces: EchoPlace[];
   suspendedTickets: SuspendedTicket[];
-  stats: SouffleStats;
   loading: boolean;
   createSouffle: (data: CreateSouffleData) => Promise<{ success: boolean; error?: string }>;
   revealSouffle: (id: string) => Promise<void>;
-  reportSouffle: (id: string) => Promise<void>;
   refreshSouffles: () => Promise<void>;
-  getSoufflesNearLocation: (lat: number, lon: number, radius?: number) => Souffle[];
-  getEchoPlacesNearLocation: (lat: number, lon: number, radius?: number) => EchoPlace[];
+  clearSimulatedSouffles: () => Promise<void>;
   placeSuspendedTicket: () => Promise<void>;
   claimSuspendedTicket: (ticketId: string) => Promise<boolean>;
-  clearSimulatedSouffles: () => Promise<void>; // NOUVELLE FONCTION
+  submitModerationVote: (souffleId: string, userId: string, decision: 'approve' | 'reject') => Promise<void>;
 }
 
 const SouffleContext = createContext<SouffleContextType | undefined>(undefined);
 
 export function SouffleProvider({ children }: { children: ReactNode }) {
   const [souffles, setSouffles] = useState<Souffle[]>([]);
-  const [echoPlaces, setEchoPlaces] = useState<EchoPlace[]>([]);
   const [suspendedTickets, setSuspendedTickets] = useState<SuspendedTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const { location } = useLocation();
-  const { addPremiumCredit } = useAuth();
-  const dataInitialized = useRef(false);
+  const { user, addPremiumCredit } = useAuth();
+  const { trackSouffleCreated, trackSouffleRevealed } = useAnalytics();
 
-  const stats: SouffleStats = {
-    totalDeposited: souffles.length,
-    totalRead: souffles.filter(s => s.hasBeenRead).length,
-    activeNearby: souffles.filter(s => new Date() < new Date(s.expiresAt)).length,
-  };
-  
+  const fetchData = useCallback(async () => {
+    if (!location) return;
+    setLoading(true);
+
+    try {
+      const { data: soufflesData, error: soufflesError } = await supabase.rpc('get_souffles_in_view', {
+        lat: location.latitude,
+        long: location.longitude,
+        radius_meters: 10000 
+      });
+      if (soufflesError) throw soufflesError;
+      
+      const revealedIds = await SouffleStorage.loadRevealedSouffles();
+      const mappedSouffles: Souffle[] = soufflesData.map((item: any) => ({
+        id: item.id,
+        content: item.content,
+        userId: item.user_id,
+        latitude: item.latitude,
+        longitude: item.longitude,
+        createdAt: new Date(item.created_at),
+        expiresAt: new Date(item.expires_at),
+        isRevealed: revealedIds.includes(item.id) || item.user_id === user?.id,
+        sticker: item.sticker,
+        backgroundId: item.background_id,
+        isSimulated: item.is_simulated,
+        moderation: item.moderation,
+      }));
+      setSouffles(mappedSouffles);
+
+      const { data: ticketsData, error: ticketsError } = await supabase
+        .from('suspended_tickets')
+        .select('*')
+        .is('claimed_by', null);
+      if (ticketsError) throw ticketsError;
+      setSuspendedTickets(ticketsData || []);
+
+    } catch (e: any) {
+      console.error("Erreur lors de la récupération des données:", e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [location, user?.id]);
+
   useEffect(() => {
-    const initData = async () => {
-      if (location && !dataInitialized.current) {
-        setLoading(true);
-        dataInitialized.current = true;
-        
-        let existingSouffles = await SouffleStorage.loadSouffles();
-        if (existingSouffles.length === 0) {
-          console.log("SIMULATION: Génération du lot initial de souffles.");
-          existingSouffles = generateInitialSouffleBatch(location, 20);
-          await SouffleStorage.saveSouffles(existingSouffles);
-        }
-        const activeSouffles = cleanupExpiredItems(existingSouffles) as Souffle[];
-        setSouffles(activeSouffles);
-        updateEchoPlaces(activeSouffles);
+    if (location) {
+      fetchData();
+    }
+  }, [location, fetchData]);
 
-        const existingTickets = await SouffleStorage.loadSuspendedTickets();
-        const activeTickets = cleanupExpiredItems(existingTickets) as SuspendedTicket[];
-        setSuspendedTickets(activeTickets);
-        
-        setLoading(false);
-      }
+  useEffect(() => {
+    const souffleChannel = supabase.channel('souffles_realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'souffles' }, () => fetchData()).subscribe();
+    const ticketChannel = supabase.channel('tickets_realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'suspended_tickets' }, () => fetchData()).subscribe();
+
+    return () => {
+      supabase.removeChannel(souffleChannel);
+      supabase.removeChannel(ticketChannel);
     };
-    initData();
-  }, [location]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (location && souffles.length > 0) {
-        const newSouffle = generateRandomSouffle(location);
-        setSouffles(prevSouffles => {
-          const updatedSouffles = [...prevSouffles, newSouffle];
-          SouffleStorage.saveSouffles(updatedSouffles);
-          updateEchoPlaces(updatedSouffles);
-          return updatedSouffles;
-        });
-      }
-    }, 90000);
-    return () => clearInterval(timer);
-  }, [location, souffles]);
-
-  const cleanupExpiredItems = (items: Array<{ expiresAt: Date }>): Array<any> => {
-    const now = new Date();
-    return items.filter(item => new Date(item.expiresAt) > now);
-  };
-
-  const updateEchoPlaces = (currentSouffles: Souffle[]) => {
-    const locationGroups: { [key: string]: Souffle[] } = {};
-    const PROXIMITY_RADIUS_METERS = 50;
-    const ECHO_THRESHOLD = 3;
-
-    currentSouffles.forEach(souffle => {
-        let addedToGroup = false;
-        for (const key in locationGroups) {
-            const groupCenter = locationGroups[key][0];
-            if (calculateDistance(souffle.latitude, souffle.longitude, groupCenter.latitude, groupCenter.longitude) < PROXIMITY_RADIUS_METERS) {
-                locationGroups[key].push(souffle);
-                addedToGroup = true;
-                break;
-            }
-        }
-        if (!addedToGroup) {
-            const newKey = `${souffle.latitude.toFixed(4)}_${souffle.longitude.toFixed(4)}`;
-            locationGroups[newKey] = [souffle];
-        }
-    });
-
-    const newEchoPlaces: EchoPlace[] = Object.values(locationGroups)
-        .filter(group => group.length >= ECHO_THRESHOLD)
-        .map(group => {
-            const avgLat = group.reduce((sum, s) => sum + s.latitude, 0) / group.length;
-            const avgLon = group.reduce((sum, s) => sum + s.longitude, 0) / group.length;
-            const id = `echo_${avgLat.toFixed(5)}_${avgLon.toFixed(5)}`;
-            return { id, name: generatePoeticalPlaceName(), latitude: avgLat, longitude: avgLon, souffleCount: group.length, description: `${group.length} souffles se croisent en ce lieu.` };
-        });
-    
-    setEchoPlaces(newEchoPlaces);
-    SouffleStorage.saveEchoPlaces(newEchoPlaces);
-  };
+  }, [supabase, fetchData]);
 
   const createSouffle = async (data: CreateSouffleData): Promise<{ success: boolean; error?: string }> => {
-    if (!location) return { success: false, error: "Localisation introuvable." };
-    const newSouffle: Souffle = {
-      id: `user_${Date.now()}`,
-      content: data.content,
+    if (!location || !user) return { success: false, error: "Utilisateur ou localisation introuvable." };
+    
+    // CORRECTION: Le compte maître ne peut pas créer de vrais souffles
+    if (user.isMaster) {
+        console.log("Mode Maître : Création de souffle désactivée pour ne pas polluer la base de données.");
+        return { success: true };
+    }
+    
+    const validationResult = validateSouffleContent(data.content);
+     if (validationResult.status === 'blocked') return { success: false, error: validationResult.reasons.join(', ') };
+
+    const newSouffleData = {
+      user_id: user.id,
+      content: validationResult.sanitizedContent ? JSON.parse(validationResult.sanitizedContent) : data.content,
       latitude: location.latitude,
       longitude: location.longitude,
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + data.duration * 60 * 60 * 1000),
-      isRevealed: false, isSimulated: false, hasBeenRead: false,
-      sticker: data.sticker, backgroundId: data.backgroundId,
+      expires_at: new Date(Date.now() + data.duration * 60 * 60 * 1000).toISOString(),
+      sticker: data.sticker,
+      background_id: data.backgroundId,
+      is_flagged: validationResult.status === 'flagged',
     };
-    const updatedSouffles = [...souffles, newSouffle];
-    setSouffles(updatedSouffles);
-    updateEchoPlaces(updatedSouffles);
-    await SouffleStorage.saveSouffles(updatedSouffles);
+
+    const { error } = await supabase.from('souffles').insert([newSouffleData]);
+    if (error) return { success: false, error: error.message };
+    trackSouffleCreated();
     return { success: true };
   };
 
-  const placeSuspendedTicket = async (): Promise<void> => {
-    if (!location) return;
-    const newTicket: SuspendedTicket = {
-      id: `suspended_ticket_${Date.now()}`,
-      latitude: location.latitude,
-      longitude: location.longitude,
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
-      isClaimed: false,
-    };
-    const updatedTickets = [...suspendedTickets, newTicket];
-    setSuspendedTickets(updatedTickets);
-    await SouffleStorage.saveSuspendedTickets(updatedTickets);
-  };
-
-  const claimSuspendedTicket = async (ticketId: string): Promise<boolean> => {
-    const ticketToClaim = suspendedTickets.find(t => t.id === ticketId && !t.isClaimed);
-    if (!ticketToClaim) return false;
-    await addPremiumCredit();
-    const updatedTickets = suspendedTickets.filter(t => t.id !== ticketId);
-    setSuspendedTickets(updatedTickets);
-    await SouffleStorage.saveSuspendedTickets(updatedTickets);
-    return true;
-  };
-
   const revealSouffle = async (id: string) => {
-    const updatedSouffles = souffles.map(s => s.id === id ? { ...s, isRevealed: true, hasBeenRead: true } : s);
+    const updatedSouffles = souffles.map(s => s.id === id ? { ...s, isRevealed: true } : s);
     setSouffles(updatedSouffles);
-    await SouffleStorage.saveSouffles(updatedSouffles);
     const revealedIds = await SouffleStorage.loadRevealedSouffles();
-    if (!revealedIds.includes(id)) await SouffleStorage.saveRevealedSouffles([...revealedIds, id]);
+    if (!revealedIds.includes(id)) {
+      await SouffleStorage.saveRevealedSouffles([...revealedIds, id]);
+      trackSouffleRevealed();
+    }
   };
   
-  const reportSouffle = async (id: string) => {
-      const updatedSouffles = souffles.filter(s => s.id !== id);
-      setSouffles(updatedSouffles);
-      updateEchoPlaces(updatedSouffles);
-      await SouffleStorage.saveSouffles(updatedSouffles);
-  };
-
-  const refreshSouffles = async () => {
-    setLoading(true);
-    const storedSouffles = await SouffleStorage.loadSouffles();
-    const activeSouffles = cleanupExpiredItems(storedSouffles) as Souffle[];
-    setSouffles(activeSouffles);
-    updateEchoPlaces(activeSouffles);
-    setLoading(false);
-  };
-  
-  // NOUVELLE FONCTION AJOUTÉE
   const clearSimulatedSouffles = async (): Promise<void> => {
     setLoading(true);
     try {
-      // On ne garde que les souffles qui ne sont PAS simulés.
-      // Un souffle est considéré comme non simulé s'il n'a pas la propriété `isSimulated` ou si elle est fausse.
-      const userSouffles = souffles.filter(s => !s.isSimulated);
-
-      setSouffles(userSouffles);
-      updateEchoPlaces(userSouffles);
-      await SouffleStorage.saveSouffles(userSouffles);
-    } catch (e) {
-      console.error("Erreur lors du nettoyage des souffles simulés:", e);
+      const { error } = await supabase.from('souffles').delete().eq('is_simulated', true);
+      if (error) throw error;
+      await fetchData();
+    } catch (e: any) {
+      console.error("Erreur lors du nettoyage des souffles simulés:", e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const getSoufflesNearLocation = (lat: number, lon: number, radius: number = 2000): Souffle[] => souffles.filter(s => calculateDistance(lat, lon, s.latitude, s.longitude) <= radius);
-  const getEchoPlacesNearLocation = (lat: number, lon: number, radius: number = 2000): EchoPlace[] => echoPlaces.filter(p => calculateDistance(lat, lon, p.latitude, p.longitude) <= radius);
-
-  const value: SouffleContextType = {
-    souffles, echoPlaces, suspendedTickets, stats, loading,
-    createSouffle, revealSouffle, reportSouffle, refreshSouffles,
-    getSoufflesNearLocation, getEchoPlacesNearLocation,
-    placeSuspendedTicket, claimSuspendedTicket,
-    clearSimulatedSouffles, // Exportée dans le contexte
+  const placeSuspendedTicket = async (): Promise<void> => {
+    if (!location || !user) return;
+    if (user.isMaster) {
+        console.log("Mode Maître : Dépôt de ticket désactivé.");
+        return;
+    }
+    const { error } = await supabase.from('suspended_tickets').insert({ latitude: location.latitude, longitude: location.longitude });
+    if(error) console.error("Erreur lors du dépôt du ticket:", error);
   };
 
-  return (
-    <SouffleContext.Provider value={value}>
-      {children}
-    </SouffleContext.Provider>
-  );
+  const claimSuspendedTicket = async (ticketId: string): Promise<boolean> => {
+    if(!user) return false;
+    
+    // CORRECTION: Si l'utilisateur est le maître, on simule l'action localement
+    if (user.isMaster) {
+        console.log("Mode Maître: Réclamation de ticket simulée.");
+        setSuspendedTickets(prev => prev.filter(t => t.id !== ticketId));
+        return true;
+    }
+
+    const { error } = await supabase.from('suspended_tickets').update({ claimed_by: user.id, claimed_at: new Date().toISOString() }).eq('id', ticketId);
+    if(error) {
+        console.error("Erreur lors de la réclamation du ticket:", error);
+        return false;
+    }
+    await addPremiumCredit();
+    return true;
+  };
+  
+  const submitModerationVote = async () => {};
+
+  const value = {
+    souffles, suspendedTickets, loading,
+    createSouffle, revealSouffle,
+    refreshSouffles: fetchData,
+    clearSimulatedSouffles,
+    placeSuspendedTicket,
+    claimSuspendedTicket,
+    submitModerationVote,
+  };
+
+  return <SouffleContext.Provider value={value}>{children}</SouffleContext.Provider>;
 }
 
 export function useSouffle() {
   const context = useContext(SouffleContext);
-  if (!context) throw new Error('useSouffle doit être utilisé à l\'intérieur d\'un SouffleProvider');
+  if (context === undefined) throw new Error('useSouffle doit être utilisé à l\'intérieur d\'un SouffleProvider');
   return context;
 }
