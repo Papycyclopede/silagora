@@ -1,98 +1,91 @@
-import type { Souffle, UserLocation } from '@/types/souffle';
-import { SUSPICIOUS_WORDS } from './moderation';
+// utils/souffleSimulator.ts
+import { v4 as uuidv4 } from 'uuid';
+import type { Souffle, SouffleContent, UserLocation } from '@/types/souffle';
+import { AVAILABLE_BACKGROUNDS } from './backgrounds';
+import { FORBIDDEN_WORDS } from './moderation';
 
-// Messages aléatoires en ANGLAIS pour la simulation
-const randomMessages = [
-  "The wind whispers a story only this bench seems to know.",
-  "I left a smile here, I hope someone finds it.",
-  "Just a moment of peace in the city's hustle and bustle.",
-  "If these walls could talk, what would they say about us?",
-  "Today, the sky is the color of melancholy.",
-  "A hot coffee, a book, and this little corner of the world. Happiness.",
-  "I closed my eyes and wished this moment would last forever.",
-  "I wonder how many people have looked at this same horizon before me.",
-  "This evening light is a promise.",
-  "Here, even silence has a voice.",
+const MIN_SIMULATION_DISTANCE = 50; // en mètres
+const MAX_SIMULATION_DISTANCE = 800; // en mètres
+
+// --- DÉBUT DE LA CORRECTION ---
+// Remplacement des clés d'émotion pour qu'elles correspondent au fichier de langue
+const SAMPLE_EMOTIONS = ['joyeux', 'triste', 'colere', 'anxieux', 'aimant', 'pensif', 'apaise', 'emu'];
+// --- FIN DE LA CORRECTION ---
+
+const SAMPLE_MESSAGES = [
+  "Les nuages dessinent des histoires éphémères dans le ciel.",
+  "Le silence a parfois plus de choses à dire que les mots.",
+  "Quelqu'un s'est déjà assis sur ce banc en pensant à l'avenir ?",
+  "J'ai caché un sourire dans ce message, j'espère que vous le trouverez.",
+  "Le bruit des feuilles mortes sous les pieds, c'est la musique de l'automne.",
+  "Si seulement les murs pouvaient parler, que raconteraient-ils de cet endroit ?",
+  "Aujourd'hui, je choisis de voir la poésie dans les petites choses.",
+  "Un café chaud, un bon livre, et le monde peut attendre.",
+  "Juste un petit mot pour briser le silence numérique.",
+  "Respirez profondément. Ce moment est unique."
 ];
 
-const flaggableMessages = [
-  `Cette promotion est-elle une arnaque ?`,
-  `Je cherche des infos sur la weed légale ici.`,
-  `Attention, ce groupe a l'air d'une vraie secte.`,
-  `Quelqu'un a un bon plan pour du viagra sans ordonnance ?`,
-  "Is this whole thing a scam?",
-  "This group feels like a cult.",
-  "Looking for info on legal weed.",
-  "Don't fall for the viagra offers, it's just spam."
+const SAMPLE_FORBIDDEN_MESSAGES = [
+  `Ce message contient le mot ${FORBIDDEN_WORDS[0]}, il devrait être modéré.`,
+  `Attention, ceci est un test de modération. Le mot ${FORBIDDEN_WORDS[1]} est présent.`,
+  `Je suis ${FORBIDDEN_WORDS[2]} de voir que personne n'a laissé de message ici avant moi !`
 ];
 
-const randomEmotions = ['joyeux', 'pensif', 'triste', 'apaise', 'emu', 'silencieux'];
-const randomStickers = ['heart', 'leaf', 'feather', 'star', 'flower'];
+const getRandomElement = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
-/**
- * Génère un seul souffle aléatoire près d'une localisation donnée.
- * Peut générer un souffle "suspect" si isFlaggable est vrai.
- */
-export function generateRandomSouffle(location: UserLocation, isFlaggable: boolean = false): Souffle {
-  const angle = Math.random() * 2 * Math.PI;
-  const radius = Math.random() * 500 + 50;
-  const latOffset = (radius / 111111) * Math.cos(angle);
-  const lonOffset = radius / (111111 * Math.cos(location.latitude * (Math.PI / 180))) * Math.sin(angle);
-  
-  const now = Date.now();
-  const duration = Math.random() > 0.5 ? 48 : 24;
+export const generateRandomSouffle = (center: UserLocation): Souffle => {
+  const isPremiumAttempt = Math.random() < 0.4;
+  const isForbiddenAttempt = Math.random() < 0.3;
+  let message = getRandomElement(SAMPLE_MESSAGES);
+  let moderationStatus: 'clean' | 'pending' = 'clean';
 
-  const message = isFlaggable
-    ? flaggableMessages[Math.floor(Math.random() * flaggableMessages.length)]
-    : randomMessages[Math.floor(Math.random() * randomMessages.length)];
+  if (isForbiddenAttempt) {
+    message = getRandomElement(SAMPLE_FORBIDDEN_MESSAGES);
+    moderationStatus = 'pending';
+    console.log("SIMULATEUR: Génération d'un souffle à modérer.");
+  }
+
+  const content: SouffleContent = {
+    jeMeSens: getRandomElement(SAMPLE_EMOTIONS),
+    messageLibre: message,
+    ceQueJaimerais: 'partager un instant.',
+  };
+
+  let backgroundId = undefined;
+  if (isPremiumAttempt) {
+    const premiumBackgrounds = AVAILABLE_BACKGROUNDS.filter(bg => bg.isPremium);
+    if (premiumBackgrounds.length > 0) {
+      backgroundId = getRandomElement(premiumBackgrounds).id;
+      console.log(`SIMULATEUR: Attribution du fond premium: ${backgroundId}`);
+    }
+  }
+
+  const randomAngle = Math.random() * 2 * Math.PI;
+  const randomDistance = MIN_SIMULATION_DISTANCE + Math.random() * (MAX_SIMULATION_DISTANCE - MIN_SIMULATION_DISTANCE);
+  const latOffset = (randomDistance / 111111) * Math.cos(randomAngle);
+  const lonOffset = (randomDistance / (111111 * Math.cos(center.latitude * Math.PI / 180))) * Math.sin(randomAngle);
 
   return {
-    id: `sim_${now}_${Math.random().toString(36).substr(2, 9)}`,
-    content: {
-      jeMeSens: randomEmotions[Math.floor(Math.random() * randomEmotions.length)],
-      messageLibre: message,
-      ceQueJaimerais: '',
-    },
-    latitude: location.latitude + latOffset,
-    longitude: location.longitude + lonOffset,
-    createdAt: new Date(now),
-    expiresAt: new Date(now + duration * 60 * 60 * 1000),
+    id: uuidv4(),
+    content: content,
+    latitude: center.latitude + latOffset,
+    longitude: center.longitude + lonOffset,
+    createdAt: new Date(),
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     isRevealed: false,
-    sticker: Math.random() > 0.6 ? randomStickers[Math.floor(Math.random() * randomStickers.length)] : undefined,
+    backgroundId: backgroundId,
     isSimulated: true,
-    // --- CORRECTION : Ajout de la propriété 'moderation' manquante ---
     moderation: {
-      status: isFlaggable ? 'pending' : 'clean',
+      status: moderationStatus,
       votes: [],
     },
   };
-}
+};
 
-/**
- * Génère un lot initial de souffles, dont certains sont "suspects".
- */
-export function generateInitialSouffleBatch(location: UserLocation, count: number): Souffle[] {
+export const generateInitialSouffleBatch = (center: UserLocation, count: number): Souffle[] => {
   const batch: Souffle[] = [];
   for (let i = 0; i < count; i++) {
-    const isFlaggable = i % 4 === 0;
-    batch.push(generateRandomSouffle(location, isFlaggable));
+    batch.push(generateRandomSouffle(center));
   }
   return batch;
-}
-
-/**
- * Génère un nom poétique pour un lieu.
- */
-export function generatePoeticalPlaceName(): string {
-  const adjectives = [
-    'Silent', 'Whispering', 'Ethereal', 'Luminous', 'Mysterious',
-    'Gentle', 'Serene', 'Enchanting', 'Peaceful', 'Melancholic'
-  ];
-  
-  const nouns = [
-    'Garden', 'Crossroads', 'Sanctuary', 'Haven', 'Clearing',
-    'Corner', 'Echo', 'Retreat', 'Cove', 'Nook'
-  ];
-
-  return `${adjectives[Math.floor(Math.random() * adjectives.length)]} ${nouns[Math.floor(Math.random() * nouns.length)]}`;
-}
+};

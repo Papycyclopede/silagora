@@ -10,14 +10,17 @@ import {
 import { router } from 'expo-router';
 import { ArrowLeft, Key, Crown } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext'; // Ajouté
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function MasterLoginScreen() {
   const [masterCode, setMasterCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
-  const { createMasterAccount } = useAuth();
-  const { t } = useLanguage(); // Ajouté
+
+  // --- CORRECTION APPLIQUÉE ICI ---
+  // On appelle la fonction signInAsMaster qui est réellement définie dans le contexte,
+  // au lieu de createMasterAccount qui n'existe pas.
+  const { signInAsMaster } = useAuth(); 
+  const { t } = useLanguage();
 
   const handleMasterLogin = async () => {
     if (!masterCode.trim()) {
@@ -25,19 +28,19 @@ export default function MasterLoginScreen() {
       return;
     }
 
-    // Code maître pour la démo du hackathon
-    // NOTE: En production, ce code serait géré via des variables d'environnement sécurisées
-    if (masterCode !== 'DEMO2024') {
+    // Le code maître est géré par une variable d'environnement pour plus de sécurité.
+    if (masterCode !== process.env.EXPO_PUBLIC_MASTER_KEY) {
       Alert.alert(t('error'), t('masterLogin.error.incorrectCode'));
       return;
     }
 
     setIsLoading(true);
-    
+
     try {
-      // Création d'un compte maître avec tous les privilèges
-      const result = await createMasterAccount();
-      
+      // --- CORRECTION APPLIQUÉE ICI ---
+      // On utilise la fonction renommée.
+      const result = await signInAsMaster();
+
       if (result.success) {
         Alert.alert(
           t('masterLogin.success.title'),
@@ -106,22 +109,22 @@ export default function MasterLoginScreen() {
         {/* Avantages du compte maître */}
         <View style={styles.benefitsSection}>
           <Text style={styles.benefitsTitle}>{t('masterLogin.benefits.title')}</Text>
-          
+
           <View style={styles.benefitItem}>
             <Text style={styles.benefitEmoji}>✨</Text>
             <Text style={styles.benefitText}>{t('masterLogin.benefits.item1')}</Text>
           </View>
-          
+
           <View style={styles.benefitItem}>
             <Text style={styles.benefitEmoji}>🎫</Text>
             <Text style={styles.benefitText}>{t('masterLogin.benefits.item2')}</Text>
           </View>
-          
+
           <View style={styles.benefitItem}>
             <Text style={styles.benefitEmoji}>🛡️</Text>
             <Text style={styles.benefitText}>{t('masterLogin.benefits.item3')}</Text>
           </View>
-          
+
           <View style={styles.benefitItem}>
             <Text style={styles.benefitEmoji}>🔧</Text>
             <Text style={styles.benefitText}>{t('masterLogin.benefits.item4')}</Text>

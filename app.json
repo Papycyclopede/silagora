@@ -38,7 +38,8 @@
       "expo-router",
       "expo-font",
       "expo-web-browser",
-      "expo-location"
+      "expo-location",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
@@ -46,12 +47,12 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "c6feca0b-9912-41f0-936f-7916fbb9800b"
+        "projectId": "cf484019-4aa3-4eec-9242-b102abeaf15b"
       }
     },
     "runtimeVersion": "1.0.0",
     "updates": {
-      "url": "https://u.expo.dev/c6feca0b-9912-41f0-936f-7916fbb9800b"
+      "url": "https://u.expo.dev/cf484019-4aa3-4eec-9242-b102abeaf15b"
     }
   }
 }

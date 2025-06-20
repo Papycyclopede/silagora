@@ -127,11 +127,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         token: code,
         type: 'magiclink',
       });
-
       if (error) throw error;
       
       if(data.user) {
         const { data: profileData } = await supabase.from('profiles').select('id').eq('id', data.user.id).single();
+
         if (!profileData) {
           const { error: insertError } = await supabase.from('profiles').insert({
             id: data.user.id,
@@ -147,11 +147,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async (): Promise<void> => {
-    // Si l'utilisateur est un vrai utilisateur Supabase, on se déconnecte
     if(session) {
       await supabase.auth.signOut();
     }
-    // Dans tous les cas, on réinitialise l'état local
     setUser(null);
     setSession(null);
     setIsAuthenticated(false);
@@ -159,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (data: Partial<User>): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: 'Utilisateur non connecté' };
+
     try {
       const updateData: { [key: string]: any } = {};
       if (data.ownedBackgrounds !== undefined) updateData.owned_backgrounds = data.ownedBackgrounds;
@@ -194,19 +193,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return result.success;
   };
   
+  // --- DÉBUT DE LA CORRECTION ---
   const purchaseItem = async (itemId: string): Promise<{success: boolean}> => {
     if (!user) return {success: false};
-    
+
+    // On ajoute une condition pour gérer spécifiquement l'achat de tickets.
+    if (itemId === 'ticket_pack_5') {
+        const currentTickets = user.ticketCount || 0;
+        // On appelle updateProfile pour incrémenter le nombre de tickets de 5.
+        const result = await updateProfile({ ticketCount: currentTickets + 5 });
+        // On met à jour l'état local de l'utilisateur pour un retour visuel immédiat
+        if (result.success) {
+            setUser(prevUser => prevUser ? { ...prevUser, ticketCount: currentTickets + 5 } : null);
+        }
+        return { success: result.success };
+    }
+
+    // La logique existante est conservée pour les autres articles (fonds d'écran).
     const currentOwned = user.ownedBackgrounds || [];
     if (currentOwned.includes(itemId)) return {success: true};
-    
+
     const newOwned = [...currentOwned, itemId];
-    
     const result = await updateProfile({ ownedBackgrounds: newOwned, premiumAccess: true });
+    // On met à jour l'état local de l'utilisateur
+    if (result.success) {
+        setUser(prevUser => prevUser ? { ...prevUser, ownedBackgrounds: newOwned, premiumAccess: true } : null);
+    }
     return {success: result.success};
   }
+  // --- FIN DE LA CORRECTION ---
 
-  // CORRECTION: Connexion simulée instantanée pour le jury
   const signInAsMaster = async (): Promise<{ success: boolean; error?: string }> => {
     console.log("Activation du mode Maître / Jury...");
     
@@ -229,9 +245,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     setUser(masterUser);
-    setSession(null); // Il n'y a pas de session Supabase pour cet utilisateur simulé
+    setSession(null);
     setIsAuthenticated(true);
-
     return { success: true };
   };
 

@@ -216,6 +216,12 @@ const resources = {
         unexpectedError: 'Une erreur inattendue est survenue',
         understood: 'Compris',
         chooseEmotionModalTitle: 'Choisir une émotion',
+        voice: {
+          title: "Voix du Souffle",
+          deep: "Grave",
+          clear: "Claire",
+          soft: "Douce"
+        }
       },
       // ----------- Emotions -----------
       emotions: {
@@ -243,13 +249,15 @@ const resources = {
         approveTitle: 'Approuver ce souffle ?',
         approveMessage: 'Voulez-vous vraiment approuver ce souffle ? Il sera alors visible par tous les utilisateurs.',
         approveConfirm: 'Approuver',
-        approvedConfirmation: 'Souffle approuvé et rendu visible.',
         rejectTitle: 'Rejeter ce souffle ?',
         rejectMessage: 'Voulez-vous vraiment rejeter ce souffle ? Il sera définitivement masqué et supprimé de la carte.',
         rejectConfirm: 'Rejeter',
-        rejectedConfirmation: 'Souffle rejeté et masqué.',
+        voteSuccessTitle: 'Vote enregistré !',
+        voteSuccessMessage: 'Votre décision a été prise en compte. Merci pour votre contribution !',
         notAuthorizedTitle: 'Accès non autorisé',
-        notAuthorizedText: 'La modération est réservée aux utilisateurs avec un compte premium.',
+        notAuthorizedText: "La modération est réservée aux utilisateurs disposant d'un compte.",
+        accessDeniedTitle: 'Accès refusé',
+        accessDeniedText: "La modération est réservée aux utilisateurs de confiance. Continuez à participer à la vie de la communauté pour obtenir ce statut.",
         emptyQueue: 'Aucun souffle à modérer',
         emptyQueueSubtext: 'Tout est en ordre pour le moment. Revenez plus tard !',
         refresh: 'Rafraîchir',
@@ -257,21 +265,23 @@ const resources = {
         approve: 'Approuver',
         reject: 'Rejeter',
         votesCount: '{{count}} vote(s) déjà exprimé(s)',
-        votesNeededText_one: '{{count}} vote restant pour une décision',
-        votesNeededText_other: '{{count}} votes restants pour une décision',
         blockedMessageTitle: 'Message bloqué',
         blockedMessage: 'Votre souffle n\'a pas pu être déposé pour la ou les raison(s) suivante(s) :\n- {{reasons}}',
         contentModifiedTitle: 'Contenu modifié',
         contentModifiedMessage: 'Certains mots de votre souffle ont été masqués pour respecter les règles de la communauté.',
+        // --- DÉBUT DE LA CORRECTION ---
+        deposited_ago: 'Déposé {{time}}',
+        votesNeededText: '{{count}} vote(s) manquant(s)',
         reasons: {
-          'Partage d\'URL non autorisé.': 'Partage d\'URL non autorisé.',
-          'Partage d\\\'informations personnelles (email/téléphone).': 'Partage d\'informations personnelles (email/téléphone).',
-          'Contenu inapproprié détecté': 'Contenu inapproprié détecté',
-          'Contenu suspect détecté': 'Contenu suspect détecté',
-          'Usage excessif de majuscules.': 'Usage excessif de majuscules.',
-          'Répétition excessive de caractères.': 'Répétition excessive de caractères.',
-          'Signalement manuel': 'Signalement manuel'
+          'url_sharing': "Partage d'URL non autorisé.",
+          'personal_info_sharing': "Partage d'informations personnelles (email/téléphone).",
+          'inappropriate_content': "Contenu inapproprié détecté.",
+          'suspicious_content': "Contenu suspect détecté.",
+          'excessive_caps': "Usage excessif de majuscules.",
+          'excessive_repetition': "Répétition excessive de caractères.",
+          'manual_report': "Signalement manuel"
         }
+        // --- FIN DE LA CORRECTION ---
       },
       // ----------- Dashboard -----------
       dashboard: {
@@ -473,12 +483,30 @@ const resources = {
       },
       // ----------- Achievements -----------
       achievements: {
-        first_souffle: { title: 'Premier Souffle', description: 'Déposer votre premier souffle' },
-        explorer: { title: 'Explorateur', description: 'Révéler 10 souffles' },
-        poet: { title: 'Poète Urbain', description: 'Créer 25 souffles' },
-        wanderer: { title: 'Vagabond', description: 'Parcourir 10 km en explorant' },
-        consistent: { title: 'Régulier', description: 'Utiliser Silagora 7 jours consécutifs' },
-        social: { title: 'Connecteur', description: 'Révéler des souffles dans 5 lieux différents' },
+        first_souffle: {
+          title: 'Premier Souffle',
+          description: 'Déposer votre premier souffle',
+        },
+        explorer: {
+          title: 'Explorateur',
+          description: 'Révéler 10 souffles',
+        },
+        poet: {
+          title: 'Poète Urbain',
+          description: 'Créer 25 souffles',
+        },
+        wanderer: {
+          title: 'Vagabond',
+          description: 'Parcourir 10 km en explorant',
+        },
+        consistent: {
+          title: 'Régulier',
+          description: 'Utiliser Silagora 7 jours consécutifs',
+        },
+        social: {
+          title: 'Connecteur',
+          description: 'Révéler des souffles dans 5 lieux différents',
+        },
       },
       // ----------- Master Login -----------
       masterLogin: {
@@ -694,21 +722,94 @@ const resources = {
         item_alert_premium_required_title: "Premium Credit Required",
         item_alert_premium_required_message: "Find suspended tickets on the map to earn credits and use premium backgrounds.",
         items: {
-          ticket_pack_5: { name: "5 Ticket Pack", description: "Unlock 5 distant reveals.", benefit1: "Reveal faraway breaths", benefit2: "Usable anywhere", benefit3: "Never expires", },
-          suspended_ticket: { name: "Suspended ticket", description: "Gift a ticket to the community.", benefit1: "Random gift to a stranger", benefit2: "Appears as a present on the map", benefit3: "Strengthens local connection", benefit4: "Fosters community spirit", },
-          background_mist: { name: "Mystical mist", description: "A misty veil for your breaths.", benefit1: "Exclusive design", benefit2: "Highlights your breaths", benefit3: "Ephemeral and poetic", },
-          background_sunray: { name: "Sunrays", description: "Shine your messages with golden light.", benefit1: "Bright appearance", benefit2: "Unique effect on the map", benefit3: "For seasoned explorers", },
-          background_autumn: { name: "Autumn leaves", description: "For warm, colorful breaths.", benefit1: "Seasonal theme", benefit2: "Ideal for gentle messages", benefit3: "Limited time only", },
-          background_aquabolt: { name: "Aqua Bolt", description: "A vibrant blue icon, like a drop of water.", benefit1: "Modern and clean style", benefit2: "Symbol of clarity", benefit3: "Hackathon Exclusive", },
-          background_cityscape: { name: "Blue Cityscape", description: "A peaceful metropolis painted in watercolor.", benefit1: "Urban and serene atmosphere", benefit2: "Ideal for city reflections", benefit3: "A touch of architecture", },
-          background_clouds: { name: "Cotton Sky", description: "Soft and dreamy clouds in a summer sky.", benefit1: "Lightness and reverie", benefit2: "For airy messages", benefit3: "A timeless classic", },
-          background_contemporary: { name: "Contemporary Art", description: "Geometric shapes and warm colors.", benefit1: "Bold aesthetic", benefit2: "For structured thoughts", benefit3: "Express your modernity", },
-          background_neobolt: { name: "Neo Bolt", description: "A futuristic and enigmatic circuit board.", benefit1: "Technological look", benefit2: "For connected messages", benefit3: "Hackathon Exclusive", },
-          background_streetart: { name: "Urban Crow", description: "A touch of street art for your messages.", benefit1: "Urban and colorful style", benefit2: "For rebellious breaths", benefit3: "An ephemeral work of art", },
+          ticket_pack_5: {
+            name: "5 Ticket Pack",
+            description: "Unlock 5 distant reveals.",
+            benefit1: "Reveal faraway breaths",
+            benefit2: "Usable anywhere",
+            benefit3: "Never expires",
+          },
+          suspended_ticket: {
+            name: "Suspended ticket",
+            description: "Gift a ticket to the community.",
+            benefit1: "Random gift to a stranger",
+            benefit2: "Appears as a present on the map",
+            benefit3: "Strengthens local connection",
+            benefit4: "Fosters community spirit",
+          },
+          background_mist: {
+            name: "Mystical mist",
+            description: "A misty veil for your breaths.",
+            benefit1: "Exclusive design",
+            benefit2: "Highlights your breaths",
+            benefit3: "Ephemeral and poetic",
+          },
+          background_sunray: {
+            name: "Sunrays",
+            description: "Shine your messages with golden light.",
+            benefit1: "Bright appearance",
+            benefit2: "Unique effect on the map",
+            benefit3: "For seasoned explorers",
+          },
+          background_autumn: {
+            name: "Autumn leaves",
+            description: "For warm, colorful breaths.",
+            benefit1: "Seasonal theme",
+            benefit2: "Ideal for gentle messages",
+            benefit3: "Limited time only",
+          },
+          background_aquabolt: {
+            name: "Aqua Bolt",
+            description: "A vibrant blue icon, like a drop of water.",
+            benefit1: "Modern and clean style",
+            benefit2: "Symbol of clarity",
+            benefit3: "Hackathon Exclusive",
+          },
+          background_cityscape: {
+            name: "Blue Cityscape",
+            description: "A peaceful metropolis painted in watercolor.",
+            benefit1: "Urban and serene atmosphere",
+            benefit2: "Ideal for city reflections",
+            benefit3: "A touch of architecture",
+          },
+          background_clouds: {
+            name: "Cotton Sky",
+            description: "Soft and dreamy clouds in a summer sky.",
+            benefit1: "Lightness and reverie",
+            benefit2: "For airy messages",
+            benefit3: "A timeless classic",
+          },
+          background_contemporary: {
+            name: "Contemporary Art",
+            description: "Geometric shapes and warm colors.",
+            benefit1: "Bold aesthetic",
+            benefit2: "For structured thoughts",
+            benefit3: "Express your modernity",
+          },
+          background_neobolt: {
+            name: "Neo Bolt",
+            description: "A futuristic and enigmatic circuit board.",
+            benefit1: "Technological look",
+            benefit2: "For connected messages",
+            benefit3: "Hackathon Exclusive",
+          },
+          background_streetart: {
+            name: "Urban Crow",
+            description: "A touch of street art for your messages.",
+            benefit1: "Urban and colorful style",
+            benefit2: "For rebellious breaths",
+            benefit3: "An ephemeral work of art",
+          },
         },
       },
       // ----------- Navigation & Tabs -----------
-      tabs: { map: 'Map', dashboard: 'Dashboard', moderation: 'Moderation', about: 'About', settings: 'Settings' },
+      tabs: {
+        map: 'Map',
+        dashboard: 'Dashboard',
+        moderation: 'Moderation',
+        about: 'About',
+        settings: 'Settings',
+      },
       // ----------- Main Map Screen -----------
       title: 'Silagora',
       subtitle: '"A message left in this place can only be read by those who will walk this same ground"',
@@ -790,6 +891,12 @@ const resources = {
         unexpectedError: 'An unexpected error occurred',
         understood: 'Understood',
         chooseEmotionModalTitle: 'Choose an emotion',
+        voice: {
+          title: "Breath's Voice",
+          deep: "Deep",
+          clear: "Clear",
+          soft: "Soft"
+        }
       },
       // ----------- Emotions -----------
       emotions: {
@@ -813,39 +920,43 @@ const resources = {
       // ----------- Moderation -----------
       moderation: {
         title: 'Citizen Moderation',
-        subtitle: 'Contribute to a benevolent space',
+        subtitle: 'Contribute to a welcoming space',
         approveTitle: 'Approve this breath?',
-        approveMessage: 'Do you really want to approve this breath? It will then be visible to all users.',
+        approveMessage: 'Are you sure you want to approve this breath? It will become visible to all users.',
         approveConfirm: 'Approve',
-        approvedConfirmation: 'Breath approved and made visible.',
         rejectTitle: 'Reject this breath?',
-        rejectMessage: 'Do you really want to reject this breath? It will be permanently hidden and removed from the map.',
+        rejectMessage: 'Are you sure you want to reject this breath? It will be permanently hidden and removed from the map.',
         rejectConfirm: 'Reject',
-        rejectedConfirmation: 'Breath rejected and hidden.',
+        voteSuccessTitle: 'Vote registered!',
+        voteSuccessMessage: 'Your decision has been recorded. Thank you for your contribution!',
         notAuthorizedTitle: 'Unauthorized Access',
-        notAuthorizedText: 'Moderation is reserved for users with a premium account.',
-        emptyQueue: 'No more souffles to moderate.',
-        emptyQueueSubtext: 'All clear for now. Check back later!',
+        notAuthorizedText: 'Moderation is reserved for users with an account.',
+        accessDeniedTitle: 'Access Denied',
+        accessDeniedText: 'Moderation is reserved for trusted users. Keep participating in the community to earn this status.',
+        emptyQueue: 'No breaths to moderate',
+        emptyQueueSubtext: 'All is well for now. Check back later!',
         refresh: 'Refresh',
         souffleId: 'Souffle ID',
         approve: 'Approve',
         reject: 'Reject',
         votesCount: '{{count}} vote(s) already expressed.',
-        votesNeededText_one: '{{count}} vote remaining for a decision',
-        votesNeededText_other: '{{count}} votes remaining for a decision',
         blockedMessageTitle: 'Message blocked',
         blockedMessage: 'Your breath could not be deposited for the following reason(s):\n- {{reasons}}',
         contentModifiedTitle: 'Content Modified',
         contentModifiedMessage: 'Some words in your breath have been masked to comply with community guidelines.',
+        // --- DÉBUT DE LA CORRECTION ---
+        deposited_ago: 'Deposited {{time}}',
+        votesNeededText: '{{count}} vote(s) needed',
         reasons: {
-          'Partage d\'URL non autorisé.': 'Unauthorized URL sharing.',
-          'Partage d\\\'informations personnelles (email/téléphone).': 'Sharing of personal information (email/phone).',
-          'Contenu inapproprié détecté': 'Inappropriate content detected',
-          'Contenu suspect détecté': 'Suspicious content detected',
-          'Usage excessif de majuscules.': 'Excessive use of capital letters.',
-          'Répétition excessive de caractères.': 'Excessive repetition of characters.',
-          'Signalement manuel': 'Manual Report'
+          'url_sharing': "Unauthorized URL sharing.",
+          'personal_info_sharing': "Sharing of personal information (email/phone).",
+          'inappropriate_content': "Inappropriate content detected.",
+          'suspicious_content': "Suspicious content detected.",
+          'excessive_caps': "Excessive use of capital letters.",
+          'excessive_repetition': "Excessive repetition of characters.",
+          'manual_report': "Manual Report."
         }
+        // --- FIN DE LA CORRECTION ---
       },
       // ----------- Dashboard -----------
       dashboard: {
@@ -1047,12 +1158,30 @@ const resources = {
       },
       // ----------- Achievements -----------
       achievements: {
-        first_souffle: { title: 'First Breath', description: 'Deposit your first breath' },
-        explorer: { title: 'Explorer', description: 'Reveal 10 breaths' },
-        poet: { title: 'Urban Poet', description: 'Create 25 breaths' },
-        wanderer: { title: 'Wanderer', description: 'Walk 10 km while exploring' },
-        consistent: { title: 'Consistent', description: 'Use Silagora for 7 consecutive days' },
-        social: { title: 'Connector', description: 'Reveal breaths in 5 different places' },
+        first_souffle: {
+          title: 'First Breath',
+          description: 'Deposit your first breath',
+        },
+        explorer: {
+          title: 'Explorer',
+          description: 'Reveal 10 breaths',
+        },
+        poet: {
+          title: 'Urban Poet',
+          description: 'Create 25 breaths',
+        },
+        wanderer: {
+          title: 'Wanderer',
+          description: 'Walk 10 km while exploring',
+        },
+        consistent: {
+          title: 'Consistent',
+          description: 'Use Silagora for 7 consecutive days',
+        },
+        social: {
+          title: 'Connector',
+          description: 'Reveal breaths in 5 different places',
+        },
       },
       // ----------- Master Login -----------
       masterLogin: {
@@ -1231,6 +1360,7 @@ const resources = {
   },
 };
 
+// --- Langues disponibles ---
 interface Language {
   code: string;
   name: string;
@@ -1242,6 +1372,7 @@ const availableLanguages: Language[] = [
   { code: 'en', name: 'English', native: 'English' }
 ];
 
+// --- Définition du type de contexte ---
 interface LanguageContextType {
   language: string;
   t: typeof i18n.t;
@@ -1252,16 +1383,18 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+// --- Fournisseur de Contexte Linguistique ---
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<string>('fr');
+  const [language, setLanguage] = useState<string>('fr'); // Langue par défaut
 
   useEffect(() => {
     const loadAndInitLanguage = async () => {
       try {
         const savedLang = await AsyncStorage.getItem(STORAGE_KEY);
         const initialLang = (savedLang && availableLanguages.some(l => l.code === savedLang)) ? savedLang : 'fr';
-        
+                  
         setLanguage(initialLang);
+
         i18n
           .use(initReactI18next)
           .init({
@@ -1313,6 +1446,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// --- Hook personnalisé pour utiliser le contexte linguistique ---
 export function useLanguage() {
   const context = useContext(LanguageContext);
   if (context === undefined) {

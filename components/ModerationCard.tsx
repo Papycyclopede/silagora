@@ -23,15 +23,15 @@ const VOTE_QUORUM = 3;
 
 export default function ModerationCard({ souffle, onVote }: ModerationCardProps) {
   const { t } = useLanguage();
-  
+
   const approveCount = souffle.moderation.votes.filter(v => v.decision === 'approve').length;
   const rejectCount = souffle.moderation.votes.filter(v => v.decision === 'reject').length;
   const cardColor = CARD_COLORS[souffle.id.charCodeAt(souffle.id.length - 1) % CARD_COLORS.length];
-
+  
   const primaryReason = souffle.moderation.reasons && souffle.moderation.reasons.length > 0
     ? souffle.moderation.reasons[0]
     : null;
-
+    
   const votesNeeded = VOTE_QUORUM - Math.max(approveCount, rejectCount);
   const showVotesNeeded = votesNeeded > 0;
 
@@ -49,7 +49,7 @@ export default function ModerationCard({ souffle, onVote }: ModerationCardProps)
           </View>
         )}
       </View>
-             
+
       <View style={styles.contentContainer}>
         {souffle.content.jeMeSens && (
             <Text style={styles.emotionText}>

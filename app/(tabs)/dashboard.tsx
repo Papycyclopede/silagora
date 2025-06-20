@@ -177,7 +177,7 @@ export default function DashboardScreen() {
     try {
       const savedActivity = await AsyncStorage.getItem('@souffle:user_activity');
       const activity: DailyActivity[] = savedActivity ? JSON.parse(savedActivity) : [];
-      
+
       const last7Days: DailyActivity[] = [];
       for (let i = 6; i >= 0; i--) {
         const date = new Date();
@@ -223,7 +223,7 @@ export default function DashboardScreen() {
       </View>
     </View>
   );
-  
+
   const renderMySouffleItem = ({ item }: { item: Souffle }) => (
     <View style={styles.souffleHistoryCard}>
         <Text style={styles.souffleHistoryText} numberOfLines={3}>"{item.content.messageLibre}"</Text>
@@ -237,7 +237,7 @@ export default function DashboardScreen() {
         </View>
     </View>
   );
-  
+
   const MainContent = () => (
     <>
       <View style={styles.header}>
@@ -245,7 +245,7 @@ export default function DashboardScreen() {
         <Text style={styles.subtitle}>{t('dashboard.subtitle')}</Text>
         {isAuthenticated && user?.pseudo && (<Text style={styles.welcomeText}>{t('dashboard.welcome', { pseudo: user.pseudo })}</Text>)}
       </View>
-      
+
       {isAuthenticated ? (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.statsGrid}>
@@ -268,7 +268,7 @@ export default function DashboardScreen() {
 
           {mySouffles.length > 0 && (
             <View style={[styles.sectionContainer, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]}>
-                <Text style={styles.sectionTitle}>Mes derniers souffles déposés</Text>
+                <Text style={styles.sectionTitle}>{t('dashboard.lastSouffles')}</Text>
                 <FlatList
                     data={mySouffles.slice(0, 10)}
                     renderItem={renderMySouffleItem}
@@ -355,35 +355,35 @@ const styles = StyleSheet.create({
   activityBarFill: { width: 20, backgroundColor: '#A8C8E1', borderRadius: 10, marginBottom: 10 },
   activityDay: { fontSize: 10, fontFamily: 'Georgia', color: '#8B7D6B', fontStyle: 'italic' },
   achievementsList: { gap: 12, paddingHorizontal: 20 },
-  achievementCard: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
+  achievementCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    borderRadius: 15, 
-    padding: 16, 
-    borderWidth: 1, 
+    borderRadius: 15,
+    padding: 16,
+    borderWidth: 1,
     borderColor: 'rgba(139, 125, 107, 0.1)',
   },
-  achievementUnlocked: { 
+  achievementUnlocked: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)'
   },
   achievementEmoji: { fontSize: 24, marginRight: 15, marginTop: 2 },
   achievementContent: { flex: 1 },
-  achievementTitle: { 
+  achievementTitle: {
     fontSize: 15,
-    fontFamily: 'Georgia', 
-    color: '#5D4E37', 
-    marginBottom: 4, 
-    fontStyle: 'italic' 
+    fontFamily: 'Georgia',
+    color: '#5D4E37',
+    marginBottom: 4,
+    fontStyle: 'italic'
   },
   achievementTitleUnlocked: { fontWeight: '500' },
-  achievementDescription: { 
+  achievementDescription: {
     fontSize: 13,
-    fontFamily: 'Georgia', 
-    color: '#8B7D6B', 
-    marginBottom: 8, 
+    fontFamily: 'Georgia',
+    color: '#8B7D6B',
+    marginBottom: 8,
     lineHeight: 18,
-    fontStyle: 'italic' 
+    fontStyle: 'italic'
   },
   progressContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   progressBar: { flex: 1, height: 4, backgroundColor: 'rgba(139, 125, 107, 0.2)', borderRadius: 2 },

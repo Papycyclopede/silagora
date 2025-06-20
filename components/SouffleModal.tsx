@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal, TextInput, TouchableOpacity, ScrollView,
   Alert, Platform, Image, ActivityIndicator,
-  // CORRECTION: On importe les composants nécessaires
   Pressable, Keyboard
 } from 'react-native';
-import { X, MapPin, Clock, Sparkles, ChevronDown, Check } from 'lucide-react-native';
+import { X, Clock, Sparkles, ChevronDown, Check } from 'lucide-react-native'; // Mic retiré car la section voix est supprimée
 import { useLocation } from '@/contexts/LocationContext';
 import { useSouffle } from '@/contexts/SouffleContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -27,15 +26,18 @@ export default function SouffleModal({ visible, onClose }: { visible: boolean, o
   const { createSouffle } = useSouffle();
   const { t } = useLanguage();
   const { user, spendPremiumCredit } = useAuth();
-  
+
   const [content, setContent] = useState('');
   const [emotion, setEmotion] = useState('');
   const [duration, setDuration] = useState<24 | 48>(24);
   const [selectedSticker, setSelectedSticker] = useState<string | undefined>();
-  const [showStickers, setShowStickers] = useState(false);
   const [showEmotionPicker, setShowEmotionPicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedBackground, setSelectedBackground] = useState<string>('default');
+
+  // Définition de l'ID de voix par défaut (ID ElevenLabs pour "douce")
+  // Comme les boutons de choix de voix sont retirés, cette valeur sera toujours utilisée.
+  const DEFAULT_VOICE_ID = 'AZnzlk1XvdvUeBnXmlld'; // Correspond à la voix 'douce'
 
   const ownedBackgrounds = user?.ownedBackgrounds || [];
   const maxLength = 280;
@@ -46,11 +48,11 @@ export default function SouffleModal({ visible, onClose }: { visible: boolean, o
       setContent('');
       setEmotion('');
       setSelectedSticker(undefined);
-      setShowStickers(false);
       setShowEmotionPicker(false);
       setIsSubmitting(false);
       setDuration(24);
       setSelectedBackground('default');
+      // Pas besoin de réinitialiser selectedVoiceId ici, car il est fixe maintenant
     }
   }, [visible]);
 
@@ -87,6 +89,7 @@ export default function SouffleModal({ visible, onClose }: { visible: boolean, o
   const handleSubmit = async () => {
     if (!location) { Alert.alert(t('error'), t('composeSouffle.positionUnavailable')); return; }
     setIsSubmitting(true);
+
     const souffleContent = { jeMeSens: emotion || '', messageLibre: content.trim(), ceQueJaimerais: '' };
     const validationResult = validateSouffleContent(souffleContent);
     if (validationResult.status === 'blocked') {
@@ -100,8 +103,18 @@ export default function SouffleModal({ visible, onClose }: { visible: boolean, o
       finalContent = JSON.parse(validationResult.sanitizedContent);
       Alert.alert(t('moderation.contentModifiedTitle'), t('moderation.contentModifiedMessage'));
     }
+
     try {
-      const result = await createSouffle({ content: finalContent, latitude: location.latitude, longitude: location.longitude, duration, sticker: selectedSticker, backgroundId: selectedBackground });
+      const result = await createSouffle({
+        content: finalContent,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        duration,
+        sticker: selectedSticker,
+        backgroundId: selectedBackground,
+        voiceId: DEFAULT_VOICE_ID, // Utilise la voix par défaut directement
+      });
+
       if (result.success) {
         onClose();
         setTimeout(() => Alert.alert(t('composeSouffle.souffleDeposited'), t('composeSouffle.souffleDepositedMessage'), [{ text: t('composeSouffle.wonderful'), style: 'default' }]), 100);
@@ -117,41 +130,16 @@ export default function SouffleModal({ visible, onClose }: { visible: boolean, o
   };
 
   const handleEmotionSelect = (emotionId: string) => { setEmotion(emotionId); setShowEmotionPicker(false); };
-  const handleStickerToggle = () => setShowStickers(!showStickers);
-  const handleStickerSelect = (stickerId: string) => setSelectedSticker(selectedSticker === stickerId ? undefined : stickerId);
-  
   const getSelectedEmotionDisplay = () => {
     if (!emotion) return t('emotions.');
     const display = getEmotionDisplay(emotion);
     return `${display?.emoji || ''} ${t(`emotions.${emotion}`)}`;
   };
 
-  const renderStickerCategory = (category: Sticker['category'], titleKey: string) => {
-    const stickers = getStickersByCategory(category).filter(sticker => !sticker.isPremium);
-    if (stickers.length === 0) return null;
-    return (
-      <View key={category} style={styles.stickerCategory}>
-        <Text style={styles.stickerCategoryTitle}>{t(titleKey)}</Text>
-        <View style={styles.stickerGrid}>
-          {stickers.map(sticker => (
-            <TouchableOpacity
-              key={sticker.id}
-              style={[styles.stickerItem, selectedSticker === sticker.id && styles.selectedStickerItem]}
-              onPress={() => handleStickerSelect(sticker.id)}
-            >
-              <Text style={styles.stickerEmoji}>{sticker.emoji}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    );
-  };
-  
   if (!visible) return null;
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      {/* CORRECTION: On entoure le tout d'un `Pressable` pour fermer le clavier */}
       <Pressable style={styles.pressableContainer} onPress={Keyboard.dismiss}>
         <View style={styles.container}>
           <View style={styles.header}>
@@ -166,35 +154,30 @@ export default function SouffleModal({ visible, onClose }: { visible: boolean, o
             <View style={styles.placeholder} />
           </View>
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-              {/* Emotion Section */}
               <View style={styles.emotionSection}>
-              <Text style={styles.emotionLabel}>{t('composeSouffle.howDoYouFeel')}</Text>
-              <TouchableOpacity style={styles.emotionSelector} onPress={() => setShowEmotionPicker(true)}>
-                <Text style={[styles.emotionSelectorText, !emotion && styles.emotionPlaceholder]}>
-                  {getSelectedEmotionDisplay()}
-                </Text>
-                <ChevronDown size={18} color="#8B7D6B" />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Message Input Section */}
-            <View style={styles.textContainer}>
-              <TextInput
-                style={styles.textInput}
-                placeholder={t('composeSouffle.messagePlaceholder')}
-                placeholderTextColor="#B8A082"
-                multiline
-                value={content}
-                onChangeText={setContent}
-                maxLength={maxLength}
-                textAlignVertical="top"
-              />
-            </View>
-            <Text style={[styles.charCountText, remainingChars < 20 && styles.charCountWarning]}>
-                {t('composeSouffle.charactersRemaining_other', { count: remainingChars })}
-            </Text>
-
-              {/* Backgrounds Section */}
+                <Text style={styles.emotionLabel}>{t('composeSouffle.howDoYouFeel')}</Text>
+                <TouchableOpacity style={styles.emotionSelector} onPress={() => setShowEmotionPicker(true)}>
+                  <Text style={[styles.emotionSelectorText, !emotion && styles.emotionPlaceholder]}>
+                    {getSelectedEmotionDisplay()}
+                  </Text>
+                  <ChevronDown size={18} color="#8B7D6B" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.textContainer}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder={t('composeSouffle.messagePlaceholder')}
+                  placeholderTextColor="#B8A082"
+                  multiline
+                  value={content}
+                  onChangeText={setContent}
+                  maxLength={maxLength}
+                  textAlignVertical="top"
+                />
+              </View>
+              <Text style={[styles.charCountText, remainingChars < 20 && styles.charCountWarning]}>
+                  {t('composeSouffle.charactersRemaining_other', { count: remainingChars })}
+              </Text>
               <View style={styles.backgroundSection}>
                 <View style={styles.sectionHeader}>
                   <Sparkles size={14} color="#8B7D6B" />
@@ -210,13 +193,11 @@ export default function SouffleModal({ visible, onClose }: { visible: boolean, o
                         style={[styles.backgroundItem, bg.shape === 'square' ? styles.backgroundItemSquare : styles.backgroundItemCircle, selectedBackground === bg.id && styles.selectedBackgroundItem]}
                       >
                         {bg.source ? <Image source={bg.source} style={[styles.backgroundImagePreview, bg.shape === 'square' ? {borderRadius: 6} : {borderRadius: 30}]} /> : <View style={styles.defaultBackgroundPreview}/>}
-                        
                         {isOwned && bg.isPremium && (
                           <View style={styles.ownedIndicator}>
                             <Check size={14} color="#FFF" />
                           </View>
                         )}
-                        
                         {bg.isPremium && !isOwned && <Text style={styles.premiumIcon}>✨</Text>}
                       </TouchableOpacity>
                     );
@@ -224,9 +205,7 @@ export default function SouffleModal({ visible, onClose }: { visible: boolean, o
                 </ScrollView>
                 <Text style={styles.backgroundHint}>{t('composeSouffle.backgroundHint')}</Text>
               </View>
-
-            {/* Duration Section */}
-            <View style={styles.durationSection}>
+              <View style={styles.durationSection}>
                   <View style={styles.sectionHeader}>
                       <Clock size={14} color="#8B7D6B" />
                       <Text style={styles.sectionTitle}>{t('composeSouffle.lifespan')}</Text>
@@ -240,8 +219,30 @@ export default function SouffleModal({ visible, onClose }: { visible: boolean, o
                       </TouchableOpacity>
                   </View>
               </View>
-          </ScrollView>
 
+              {/* SECTION CHOIX DE LA VOIX COMPLÈTEMENT RETIRÉE ICI */}
+              {/* Le code suivant était ici et a été supprimé ou commenté :
+              <View style={styles.durationSection}>
+                <View style={styles.sectionHeader}>
+                    <Mic size={14} color="#8B7D6B" />
+                    <Text style={styles.sectionTitle}>{t('composeSouffle.voice.title')}</Text>
+                </View>
+                <View style={styles.durationButtons}>
+                  {VOICE_OPTIONS.map(option => (
+                    <TouchableOpacity
+                       key={option.id}
+                      style={[styles.durationButton, selectedVoiceId === option.id && styles.activeDurationButton]}
+                       onPress={() => setSelectedVoiceId(option.id)}>
+                      <Text style={[styles.durationButtonText, selectedVoiceId === option.id && styles.activeDurationButtonText]}>
+                        {t(option.labelKey)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              */}
+
+          </ScrollView>
           <View style={styles.footer}>
             <TouchableOpacity
               style={[styles.submitButton, (!content.trim() || !location || isSubmitting) && styles.disabledButton]}
@@ -251,8 +252,6 @@ export default function SouffleModal({ visible, onClose }: { visible: boolean, o
               {isSubmitting ? <ActivityIndicator color="#F9F5F0" /> : <Text style={styles.submitButtonText}>{t('composeSouffle.depositGently')}</Text>}
             </TouchableOpacity>
           </View>
-
-          {/* Emotion Picker Modal */}
           {showEmotionPicker && (
             <Modal visible={showEmotionPicker} transparent={true} animationType="fade" onRequestClose={() => setShowEmotionPicker(false)}>
               <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowEmotionPicker(false)}>

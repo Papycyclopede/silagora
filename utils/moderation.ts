@@ -1,9 +1,7 @@
 // utils/moderation.ts (Version optimisée et modulaire)
-
 import type { SouffleContent } from '@/types/souffle';
 
 // --- CONFIGURATION DE LA MODÉRATION ---
-
 const THRESHOLD_BLOCK = 10;
 const THRESHOLD_SANITIZE = 4;
 
@@ -17,7 +15,8 @@ const WEIGHTS = {
 };
 
 // --- DICTIONNAIRES DE MOTS DE BASE ---
-const FORBIDDEN_WORDS = [
+// CORRECTION : On ajoute le mot-clé 'export' pour rendre cette liste accessible aux autres fichiers
+export const FORBIDDEN_WORDS = [
   'connard', 'salope', 'putain', 'merde', 'con', 'conne', 'encule', 'fdp',
   'bitch', 'fuck', 'shit', 'cunt', 'asshole', 'motherfucker', 'nword', 'nigger',
   'nazi', 'hitler', 'terroriste', 'terrorist', 'raciste', 'racist', 'daesh', 'isis',
@@ -44,30 +43,29 @@ function superNormalize(text: string): string {
 }
 
 // --- STRUCTURE DE RÈGLES MODULAIRE ---
-
-// Interface pour définir une règle de modération
 interface ModerationRule {
   key: string;
   weight: number;
-  // La fonction de vérification retourne un booléen (simple détection)
-  // ou un tableau des mots/chaînes trouvés (pour la sanitisation).
   check: (originalText: string, normalizedText: string) => boolean | string[];
   getReason: (match?: boolean | string[]) => string;
 }
 
-// Collection de toutes nos règles
+// --- DÉBUT DE LA CORRECTION ---
+// La seule modification est dans la fonction `getReason` de chaque règle.
+// Elle retourne maintenant une clé simple et non une phrase.
+
 const moderationRules: ModerationRule[] = [
   {
     key: 'url',
     weight: WEIGHTS.URL,
     check: (originalText) => /(https?:\/\/[^\s]+)/g.test(originalText),
-    getReason: () => 'Partage d\'URL non autorisé.',
+    getReason: () => 'url_sharing',
   },
   {
     key: 'pii',
     weight: WEIGHTS.PERSONAL_INFO,
     check: (originalText) => (/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i).test(originalText) || /(?:(?:\+|00)33[\s.-]{0,3}(?:\(0\)[\s.-]{0,3})?|0)[1-9](?:(?:[\s.-]?\d{2}){4}|\d{2}(?:[\s.-]?\d{3}){2})/.test(originalText),
-    getReason: () => 'Partage d\'informations personnelles (email/téléphone).',
+    getReason: () => 'personal_info_sharing',
   },
   {
     key: 'forbidden_words',
@@ -76,7 +74,8 @@ const moderationRules: ModerationRule[] = [
       const foundWords = FORBIDDEN_WORDS.filter(word => normalizedText.includes(superNormalize(word)));
       return foundWords.length > 0 ? foundWords : false;
     },
-    getReason: (match) => `Contenu inapproprié détecté (${(match as string[]).join(', ')}).`,
+    // CORRIGÉ : La fonction ne retourne plus une phrase dynamique
+    getReason: () => 'inappropriate_content',
   },
   {
     key: 'suspicious_words',
@@ -85,7 +84,8 @@ const moderationRules: ModerationRule[] = [
       const foundWords = SUSPICIOUS_WORDS.filter(word => normalizedText.includes(superNormalize(word)));
       return foundWords.length > 0 ? foundWords : false;
     },
-    getReason: (match) => `Contenu suspect détecté (${(match as string[]).join(', ')}).`,
+    // CORRIGÉ : La fonction ne retourne plus une phrase dynamique
+    getReason: () => 'suspicious_content',
   },
   {
     key: 'excessive_caps',
@@ -94,20 +94,20 @@ const moderationRules: ModerationRule[] = [
       const capsRatio = (originalText.match(/[A-Z]/g)?.length || 0) / originalText.length;
       return capsRatio > 0.5 && originalText.length > 20;
     },
-    getReason: () => 'Usage excessif de majuscules.',
+    getReason: () => 'excessive_caps',
   },
   {
     key: 'repetition',
     weight: WEIGHTS.REPETITION,
-    // ✅ CORRECTION DE LA REGEX
     check: (originalText) => /(.)\1{3,}/.test(originalText),
-    getReason: () => 'Répétition excessive de caractères.',
+    getReason: () => 'excessive_repetition',
   },
 ];
 
+// --- FIN DE LA CORRECTION ---
+
 
 // --- FONCTION DE VALIDATION PRINCIPALE (REFACTORISÉE) ---
-
 interface ModerationResult {
   status: 'clean' | 'flagged' | 'blocked';
   reasons: string[];
@@ -118,34 +118,27 @@ export function validateSouffleContent(content: SouffleContent): ModerationResul
   let score = 0;
   const reasons: string[] = [];
   const wordsToSanitize: string[] = [];
-  
+
   const originalText = `${content.jeMeSens} ${content.messageLibre} ${content.ceQueJaimerais}`;
   const normalizedText = superNormalize(originalText);
 
-  // Exécution du pipeline de règles
   moderationRules.forEach(rule => {
     const match = rule.check(originalText, normalizedText);
     if (match) {
       score += rule.weight;
       reasons.push(rule.getReason(match));
-      // Si le check a retourné un tableau de mots, on les ajoute pour la sanitisation
       if (Array.isArray(match)) {
         wordsToSanitize.push(...match);
       }
     }
   });
-  
-  // Décision finale basée sur le score
+
   if (score >= THRESHOLD_BLOCK) {
-    // ✅ Utilisation de Set pour dédoublonner les raisons
     return { status: 'blocked', reasons: Array.from(new Set(reasons)) };
   }
 
   if (score >= THRESHOLD_SANITIZE) {
-    // ✅ Logique de sanitisation plus robuste
-    // Crée une regex dynamique avec tous les mots à censurer
     const sanitizationRegex = new RegExp(wordsToSanitize.map(word =>
-      // Échappe les caractères spéciaux pour la regex
       word.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
     ).join('|'), 'gi');
     

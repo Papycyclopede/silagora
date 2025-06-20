@@ -14,17 +14,17 @@ export interface ModerationVote {
   timestamp: Date;
 }
 
-// CORRECTION: On s'assure que la propriété 'reasons' est bien présente dans l'interface
 export interface ModerationInfo {
   status: ModerationStatus;
   votes: ModerationVote[];
   moderatedAt?: Date;
-  reasons?: string[]; // Cette ligne est essentielle pour corriger l'erreur
+  reasons?: string[];
 }
 
 export interface Souffle {
   id: string;
   userId?: string;
+  pseudo?: string;
   content: SouffleContent;
   latitude: number;
   longitude: number;
@@ -36,6 +36,9 @@ export interface Souffle {
   hasBeenRead?: boolean;
   isSimulated?: boolean;
   moderation: ModerationInfo;
+  language_code?: string;
+  voice_id?: string;
+  audio_url?: string;
 }
 
 export interface SuspendedTicket {
@@ -54,6 +57,7 @@ export interface CreateSouffleData {
   duration: 24 | 48;
   sticker?: string;
   backgroundId?: string;
+  voiceId: string;
 }
 
 export interface EchoPlace {

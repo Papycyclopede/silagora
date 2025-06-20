@@ -1,5 +1,6 @@
 // app/_layout.tsx (corrigé)
 
+import 'react-native-get-random-values';
 import 'intl-pluralrules';
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
