@@ -11,7 +11,7 @@ Silagora is designed to reconcile technology and presence, poetry and territory.
 
 ## 🚀 Instantly Test Silagora (Expo)
 
-- **Live link**: [https://expo.dev/@Papycyclopede/Silagora](https://expo.dev/@Papycyclopede/Silagora)
+- **Live link**: [[https://expo.dev/@Papycyclopede/Silagora](https://expo.dev/@Papycyclopede/Silagora](https://expo.dev/preview/update?message=Initial%20commit&updateRuntimeVersion=1.0.0&createdAt=2025-06-20T20%3A35%3A38.705Z&slug=exp&projectId=cf484019-4aa3-4eec-9242-b102abeaf15b&group=1aed4593-ed73-4f5e-aa11-fb33b909ba75))
 - **Scan the QR code** with **Expo Go** (iOS/Android)
 - Or open in your browser (web version)
 
