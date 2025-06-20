@@ -13,7 +13,7 @@ Silagora is designed to reconcile technology and presence, poetry and territory.
 Silagora was born from a simple observation: attention economy and social networks overload our environment, creating stress and disconnecting us from reality.
 I wanted to invent a healthier digital space, where everyone can express themselves freely without being judged, and where each message resonates with a real physical place.
 
-* **Souffles**: Short, anonymous, ephemeral messages placed on the map, visible only within a 15 m radius.
+* **Breath**: Short, anonymous, ephemeral messages placed on the map, visible only within a 15 m radius.
 * **Interaction**: Each souffle appears as a watercolor icon; as you approach, it animates, and can only be read if you are physically present.
 * **Security & privacy**: Each souffle becomes visible 30 min after posting, never in real time, with no profiles and auto-deletion.
 * **Moderation**: In-app reporting, automated filtering, human/AI verification, instant masking of flagged content.
