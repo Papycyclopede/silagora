@@ -29,31 +29,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setIsAuthenticated(!!session);
-      if (session) {
-        fetchUserProfile(session.user);
-      } else {
-        setIsLoading(false);
-      }
-    });
+    // Vérifier si Supabase est correctement configuré
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.warn('Erreur lors de la récupération de la session:', error.message);
+          setError('Configuration Supabase requise');
+          setIsLoading(false);
+          return;
+        }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
         setSession(session);
         setIsAuthenticated(!!session);
         if (session) {
-          fetchUserProfile(session.user);
+          await fetchUserProfile(session.user);
         } else {
-          setUser(null);
+          setIsLoading(false);
         }
+      } catch (err: any) {
+        console.warn('Erreur d\'initialisation de l\'authentification:', err.message);
+        setError('Erreur de connexion à la base de données');
+        setIsLoading(false);
       }
-    );
-
-    return () => {
-      subscription?.unsubscribe();
     };
+
+    initializeAuth();
+
+    // Configurer l'écoute des changements d'état d'authentification
+    try {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (_event: AuthChangeEvent, session: Session | null) => {
+          setSession(session);
+          setIsAuthenticated(!!session);
+          if (session) {
+            fetchUserProfile(session.user);
+          } else {
+            setUser(null);
+          }
+        }
+      );
+
+      return () => {
+        subscription?.unsubscribe();
+      };
+    } catch (err: any) {
+      console.warn('Erreur lors de la configuration de l\'écoute d\'authentification:', err.message);
+    }
   }, []);
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser) => {
@@ -64,7 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', supabaseUser.id)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Erreur lors de la récupération du profil:', error.message);
+        setError('Erreur de récupération du profil');
+        setIsLoading(false);
+        return;
+      }
       
       if (profileData) {
         const userProfile: User = {
@@ -87,8 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userProfile);
       }
     } catch (e: any) {
-      console.error("Erreur lors de la récupération du profil:", e);
-      setError(e.message);
+      console.warn("Erreur lors de la récupération du profil:", e.message);
+      setError('Erreur de connexion à la base de données');
     } finally {
       setIsLoading(false);
     }
@@ -247,6 +275,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(masterUser);
     setSession(null);
     setIsAuthenticated(true);
+    setError(null); // Clear any previous errors
     return { success: true };
   };
 
