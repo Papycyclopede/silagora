@@ -1,54 +1,37 @@
 {
   "expo": {
-    "name": "Silagora",
-    "slug": "Silagora",
+    "name": "silagora",
+    "slug": "silagora",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "lesouffle",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "platforms": ["ios", "android"],
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true,
-      "config": {
-        "googleMapsApiKey": "AIzaSyDummy_Key_For_Development_Only"
-      },
-      "bundleIdentifier": "com.anonymous.Silagora"
+      "supportsTablet": true
     },
     "android": {
-      "config": {
-        "googleMaps": {
-          "apiKey": "AIzaSyDummy_Key_For_Development_Only"
-        }
-      },
-      "permissions": [
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
-      ],
-      "package": "com.anonymous.Silagora"
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro"
     },
     "plugins": [
-      "expo-router",
-      "expo-font",
-      "expo-web-browser",
-      "expo-location",
-      "expo-secure-store"
+      "expo-router"
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "cf484019-4aa3-4eec-9242-b102abeaf15b"
-      }
-    },
-    "runtimeVersion": "1.0.0",
-    "updates": {
-      "url": "https://u.expo.dev/cf484019-4aa3-4eec-9242-b102abeaf15b"
     }
   }
 }

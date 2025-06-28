@@ -1,10 +1,10 @@
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function HomeTab() {
+export default function ProfileTab() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Bienvenue sur Silagora</Text>
-      <Text style={styles.subtitle}>Votre application est maintenant configurée correctement</Text>
+      <Text style={styles.title}>Profil</Text>
+      <Text style={styles.subtitle}>Gérez votre profil utilisateur</Text>
     </View>
   );
 }
@@ -22,12 +22,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#4D3B2F',
     marginBottom: 10,
-    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     color: '#8B7355',
     textAlign: 'center',
-    lineHeight: 24,
   },
 });
