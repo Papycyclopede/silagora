@@ -8,6 +8,7 @@
     "scheme": "lesouffle",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "platforms": ["ios", "android"],
     "ios": {
       "supportsTablet": true,
       "config": {
@@ -28,11 +29,6 @@
         "android.permission.ACCESS_FINE_LOCATION"
       ],
       "package": "com.anonymous.Silagora"
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "single",
-      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
