@@ -28,7 +28,13 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "This app uses location to show nearby messages."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
