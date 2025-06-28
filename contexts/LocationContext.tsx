@@ -60,7 +60,8 @@ export function LocationProvider({ children }: LocationProviderProps) {
     setPermissionPermanentlyDenied(false);
 
     if (Platform.OS === 'web') {
-      if (!navigator.geolocation) {
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined' || typeof navigator === 'undefined' || !navigator.geolocation) {
         setError('Géolocalisation non supportée par ce navigateur');
         setLoading(false);
         setHasPermission(false);
@@ -160,7 +161,11 @@ export function LocationProvider({ children }: LocationProviderProps) {
     stopWatchingLocation();
 
     if (Platform.OS === 'web') {
-      if (!navigator.geolocation) return;
+      // Check if we're in a browser environment
+      if (typeof window === 'undefined' || typeof navigator === 'undefined' || !navigator.geolocation) {
+        return;
+      }
+      
       const watchId = navigator.geolocation.watchPosition(
         (position) => {
           const newLocation = { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy };
