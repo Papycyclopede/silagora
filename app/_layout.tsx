@@ -8,6 +8,9 @@ import { AudioProvider } from '@/contexts/AudioContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { SouffleProvider } from '@/contexts/SouffleContext';
 
+// Import react-native-reanimated at the root level
+import 'react-native-reanimated';
+
 export default function RootLayout() {
   useFrameworkReady();
 

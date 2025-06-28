@@ -1,20 +1,13 @@
-// app/_initial.tsx (anciennement app/index.tsx)
-import 'react-native-reanimated';
-import React, { useEffect, useRef, useState } from 'react'; // Ajouté useState
+// app/index.tsx
+import React, { useEffect, useRef, useState } from 'react'; 
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAudio } from '@/contexts/AudioContext';
 import { View, Text, StyleSheet, Animated, ImageBackground, Platform } from 'react-native';
 
-export default function AppInitializer() { // Renommé de IndexScreen à AppInitializer pour plus de clarté
+export default function AppInitializer() { 
   const { isLoading: isAuthLoading } = useAuth();
   const { isSoundLoading } = useAudio();
-
-  // Correction: Si ces fournisseurs sont bien dans _layout.tsx et que cet écran est la première route,
-  // alors les hooks useAuth et useAudio sont accessibles.
-  // La logique de redirection doit tenir compte de la première fois vs. pas la première fois.
-  // Votre ancien _initial.tsx (qui est maintenant AppInitializer) a une logique de redirection vers welcome.
-  // Nous allons réintégrer cette logique ici.
 
   const [initializationStatus, setInitializationStatus] = useState("Démarrage...");
 
@@ -44,41 +37,33 @@ export default function AppInitializer() { // Renommé de IndexScreen à AppInit
 
   // Logique de redirection principale
   useEffect(() => {
-    const checkAndRedirect = async () => {
-      // Check if we're in a browser environment and router is ready
-      if (Platform.OS === 'web' && typeof window === 'undefined') {
-        return; // Don't proceed if window is not available
-      }
+    // Skip navigation during server-side rendering
+    if (Platform.OS === 'web' && typeof window === 'undefined') {
+      return;
+    }
 
-      // Pour la démo du hackathon, nous allons simplifier et toujours rediriger vers welcome
-      // Si vous voulez la logique de "premier lancement", utilisez AsyncStorage ici.
+    const checkAndRedirect = async () => {
       setInitializationStatus("Préparation des murmures...");
       
       // Attendez que l'auth et l'audio soient prêts
       if (!isAuthLoading && !isSoundLoading) {
-        // Redirige toujours vers l'écran de bienvenue pour la démo/setup initial
-        // Après le premier setup, vous pourrez router directement vers (tabs)
         setInitializationStatus("Prêt pour l'envol !");
         console.log("Initialisation complète. Redirection vers /welcome...");
         
-        // Fix for web platform: defer navigation to avoid window undefined error
-        if (Platform.OS === 'web') {
-          // Check if window is available before navigation
-          if (typeof window !== 'undefined') {
-            setTimeout(() => {
-              try {
+        // Safe navigation with error handling
+        try {
+          // For web, we need to ensure window is defined and use a small delay
+          if (Platform.OS === 'web') {
+            if (typeof window !== 'undefined') {
+              setTimeout(() => {
                 router.replace('/(auth)/welcome');
-              } catch (error) {
-                console.error('Navigation error:', error);
-              }
-            }, 100);
+              }, 300);
+            }
+          } else {
+            router.replace('/(auth)/welcome');
           }
-        } else {
-          try {
-            router.replace('/(auth)/welcome'); // Redirige toujours vers l'écran d'accueil pour la démo
-          } catch (error) {
-            console.error('Navigation error:', error);
-          }
+        } catch (error) {
+          console.error('Navigation error:', error);
         }
       } else {
         console.log(`Statuts de chargement: Auth=${!isAuthLoading}, Audio=${!isSoundLoading}`);
