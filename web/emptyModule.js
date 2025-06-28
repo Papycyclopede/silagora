@@ -17,3 +17,32 @@ export const Geojson = () => null;
 // Export any other commonly used exports
 export const PROVIDER_GOOGLE = 'google';
 export const PROVIDER_DEFAULT = 'default';
+
+// Common native module exports
+export const impactAsync = () => Promise.resolve();
+export const notificationAsync = () => Promise.resolve();
+export const selectionAsync = () => Promise.resolve();
+
+// Expo modules common exports
+export const authenticateAsync = () => Promise.resolve({ success: false });
+export const hasHardwareAsync = () => Promise.resolve(false);
+export const isEnrolledAsync = () => Promise.resolve(false);
+
+// Sensor exports
+export const Accelerometer = {
+  addListener: () => ({ remove: () => {} }),
+  removeAllListeners: () => {},
+  setUpdateInterval: () => {},
+};
+
+export const Gyroscope = {
+  addListener: () => ({ remove: () => {} }),
+  removeAllListeners: () => {},
+  setUpdateInterval: () => {},
+};
+
+export const Magnetometer = {
+  addListener: () => ({ remove: () => {} }),
+  removeAllListeners: () => {},
+  setUpdateInterval: () => {},
+};

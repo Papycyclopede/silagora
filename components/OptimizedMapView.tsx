@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Platform-specific imports
 let MapView: any = View;
 let Marker: any = View;
 let Circle: any = View;
@@ -31,7 +32,7 @@ if (Platform.OS !== 'web') {
     Marker = maps.Marker;
     Circle = maps.Circle;
   } catch (error) {
-    console.error("react-native-maps n'est pas disponible.", error);
+    console.warn("react-native-maps not available on this platform", error);
   }
 }
 
@@ -66,12 +67,11 @@ const unrevealedColors = [
   'rgba(230, 190, 210, 0.85)',
 ];
 
-// --- MODIFICATION 1: Mise à jour de l'interface des props ---
 interface OptimizedMapViewProps {
   mode: 'read' | 'write';
   isEchoSimulationActive: boolean;
-  onMarkerPress: (souffle: Souffle) => Promise<void>; // On attend cette fonction
-  onTicketPress: (ticket: SuspendedTicket) => Promise<void>; // On ajoute aussi celle pour les tickets
+  onMarkerPress: (souffle: Souffle) => Promise<void>;
+  onTicketPress: (ticket: SuspendedTicket) => Promise<void>;
 }
 
 export interface MapViewActions {
@@ -86,6 +86,32 @@ const MIN_ZOOM = 8;
 const MAX_ZOOM = 20;
 const DEFAULT_ZOOM = 16;
 const calculateDelta = (zoom: number) => Math.max(0.001, 360 / Math.pow(2, zoom));
+
+// Web fallback component
+const WebMapFallback = ({ location, souffles, onMarkerPress }: any) => (
+  <View style={styles.webMapContainer}>
+    <Text style={styles.webMapTitle}>Interactive Map</Text>
+    <Text style={styles.webMapSubtitle}>
+      {location ? `Location: ${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}` : 'Location not available'}
+    </Text>
+    <Text style={styles.webMapInfo}>
+      {souffles.length} souffles nearby
+    </Text>
+    <View style={styles.webSoufflesList}>
+      {souffles.slice(0, 5).map((souffle: Souffle, index: number) => (
+        <TouchableOpacity
+          key={souffle.id}
+          style={styles.webSouffleItem}
+          onPress={() => onMarkerPress(souffle)}
+        >
+          <Text style={styles.webSouffleText}>
+            {souffle.isRevealed ? '💬' : '🤫'} Souffle {index + 1}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  </View>
+);
 
 const SouffleMarker = React.memo(({ souffle, userLocation, onPress, index }: { souffle: Souffle; userLocation: any; onPress: (souffle: Souffle) => void; index: number }) => {
   const canReveal = useMemo(() => isWithinRevealDistance(userLocation.latitude, userLocation.longitude, souffle.latitude, souffle.longitude), [userLocation, souffle]);
@@ -113,6 +139,16 @@ const SouffleMarker = React.memo(({ souffle, userLocation, onPress, index }: { s
     }
     const color = unrevealedColors[index % unrevealedColors.length];
     markerStyle.push({ backgroundColor: color });
+  }
+
+  if (Platform.OS === 'web') {
+    return (
+      <TouchableOpacity style={markerStyle} onPress={() => onPress(souffle)}>
+        <Text style={styles.souffleMarkerEmoji}>
+          {souffle.isRevealed ? (sticker?.emoji || '💬') : '🤫'}
+        </Text>
+      </TouchableOpacity>
+    );
   }
 
   return (
@@ -146,6 +182,14 @@ const SouffleMarker = React.memo(({ souffle, userLocation, onPress, index }: { s
 const TicketMarker = React.memo(({ ticket, userLocation, onPress }: { ticket: SuspendedTicket; userLocation: any; onPress: (ticket: SuspendedTicket) => void }) => {
     const canClaim = useMemo(() => isWithinRevealDistance(userLocation.latitude, userLocation.longitude, ticket.latitude, ticket.longitude), [userLocation, ticket]);
     
+    if (Platform.OS === 'web') {
+      return (
+        <TouchableOpacity style={styles.ticketMarker} onPress={() => onPress(ticket)}>
+          <Gift size={20} color="#C17B5C" />
+        </TouchableOpacity>
+      );
+    }
+    
     return (
         <Marker key={ticket.id} coordinate={ticket} tracksViewChanges={false}>
             <AnimatedHalo isActive={true} canReveal={canClaim}>
@@ -157,12 +201,18 @@ const TicketMarker = React.memo(({ ticket, userLocation, onPress }: { ticket: Su
     );
 });
 
-const UserMarker = React.memo(({location}: {location: any}) => (
+const UserMarker = React.memo(({location}: {location: any}) => {
+  if (Platform.OS === 'web') {
+    return null;
+  }
+  
+  return (
     <>
         <Circle center={location} radius={500} strokeColor="rgba(139, 125, 107, 0.3)" fillColor="rgba(139, 125, 107, 0.05)" strokeWidth={1} />
         <Circle center={location} radius={15} strokeColor="rgba(168, 200, 225, 0.8)" fillColor="rgba(168, 200, 225, 0.2)" strokeWidth={1} />
     </>
-));
+  );
+});
 
 const OptimizedMapView = forwardRef<MapViewActions, OptimizedMapViewProps>(({ mode, onMarkerPress, onTicketPress, isEchoSimulationActive }, ref) => {
   const { location, loading: locationLoading } = useLocation();
@@ -179,7 +229,7 @@ const OptimizedMapView = forwardRef<MapViewActions, OptimizedMapViewProps>(({ mo
         try {
             const savedMapType = await AsyncStorage.getItem(MAP_TYPE_STORAGE_KEY) as 'standard' | 'satellite' | 'hybrid' | null;
             if (savedMapType) setMapType(savedMapType);
-        } catch (e) { console.error("Échec du chargement du style de la carte.", e); }
+        } catch (e) { console.error("Failed to load map type.", e); }
     };
     loadMapType();
   }, []);
@@ -198,7 +248,6 @@ const OptimizedMapView = forwardRef<MapViewActions, OptimizedMapViewProps>(({ mo
   const displayedSouffles = useMemo(() => {
     if (!isModeratedReading) return souffles;
     return souffles.filter(souffle => {
-      // On affiche les souffles "clean" ou "approuvés"
       return souffle.moderation.status === 'clean' || souffle.moderation.status === 'approved';
     });
   }, [souffles, isModeratedReading]);
@@ -218,7 +267,7 @@ const OptimizedMapView = forwardRef<MapViewActions, OptimizedMapViewProps>(({ mo
         setMapType(current => {
             const newMapType = current === 'standard' ? 'satellite' : 'standard';
             AsyncStorage.setItem(MAP_TYPE_STORAGE_KEY, newMapType).catch(e => {
-                console.error("Échec de la sauvegarde du style de la carte.", e);
+                console.error("Failed to save map type.", e);
             });
             return newMapType;
         });
@@ -226,7 +275,7 @@ const OptimizedMapView = forwardRef<MapViewActions, OptimizedMapViewProps>(({ mo
   }));
 
   const handleMapAction = (newZoom: number) => {
-    if (internalMapRef.current && location) {
+    if (Platform.OS !== 'web' && internalMapRef.current && location) {
       const clampedZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
       setZoomLevel(clampedZoom);
       const delta = calculateDelta(clampedZoom);
@@ -234,11 +283,24 @@ const OptimizedMapView = forwardRef<MapViewActions, OptimizedMapViewProps>(({ mo
     }
   };
 
-  if (Platform.OS === 'web' || !location) {
+  if (!location) {
     return (
       <View style={styles.mapUnavailableOverlay}>
         <ActivityIndicator size="large" color="#A8C8E1" />
         <Text style={styles.mapUnavailableText}>{locationLoading ? t('locating') : t('locationRequiredToExplore')}</Text>
+      </View>
+    );
+  }
+
+  // Web fallback
+  if (Platform.OS === 'web') {
+    return (
+      <View style={styles.mobileMapContainer}>
+        <WebMapFallback 
+          location={location}
+          souffles={displayedSouffles}
+          onMarkerPress={onMarkerPress}
+        />
       </View>
     );
   }
@@ -289,6 +351,50 @@ const styles = StyleSheet.create({
   fullMap: { ...StyleSheet.absoluteFillObject },
   mapUnavailableOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9F7F4' },
   mapUnavailableText: { fontSize: 15, fontFamily: 'Georgia', color: '#8B7D6B', textAlign: 'center', fontStyle: 'italic', marginTop: 20 },
+  webMapContainer: {
+    flex: 1,
+    backgroundColor: '#F9F7F4',
+    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  webMapTitle: {
+    fontSize: 24,
+    fontFamily: 'Georgia',
+    color: '#5D4E37',
+    marginBottom: 10,
+    fontStyle: 'italic',
+  },
+  webMapSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Georgia',
+    color: '#8B7D6B',
+    marginBottom: 20,
+    fontStyle: 'italic',
+  },
+  webMapInfo: {
+    fontSize: 16,
+    fontFamily: 'Georgia',
+    color: '#5D4E37',
+    marginBottom: 20,
+  },
+  webSoufflesList: {
+    width: '100%',
+    maxWidth: 400,
+  },
+  webSouffleItem: {
+    backgroundColor: 'rgba(168, 200, 225, 0.3)',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  webSouffleText: {
+    fontSize: 14,
+    fontFamily: 'Georgia',
+    color: '#5D4E37',
+    fontStyle: 'italic',
+  },
   souffleMarkerBase: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, shadowColor: '#5D4E37', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 2, overflow: 'hidden' },
   souffleMarkerCircle: { borderRadius: 19, borderColor: 'rgba(255, 255, 255, 0.9)' },
   souffleMarkerSquare: { borderRadius: 8, borderColor: 'rgba(255, 255, 255, 0.9)' },

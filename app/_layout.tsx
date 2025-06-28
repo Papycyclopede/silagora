@@ -1,8 +1,5 @@
-// app/_layout.tsx (corrigé)
-
-import 'react-native-get-random-values';
-import 'intl-pluralrules';
-import { useEffect } from 'react';
+import 'react-native-reanimated';
+import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
@@ -22,29 +19,28 @@ import { AudioProvider } from '@/contexts/AudioContext';
 import { LocationProvider } from '@/contexts/LocationContext';
 import { SouffleProvider } from '@/contexts/SouffleContext';
 
-// Empêche le splash screen de se masquer automatiquement
+// Prevent the splash screen from auto-hiding before asset loading is complete
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useFrameworkReady();
 
-  // Chargement des polices pour l'application
+  // Load fonts for the application
   const [fontsLoaded, fontError] = useFonts({
     'Satisfy-Regular': Satisfy_400Regular,
     'Quicksand-Light': Quicksand_300Light,
-    // --- CORRECTION APPLIQUÉE ICI ---
-    'Quicksand-Regular': Quicksand_400Regular, // 'Quicksland' a été corrigé en 'Quicksand'
+    'Quicksand-Regular': Quicksand_400Regular,
     'Quicksand-Medium': Quicksand_500Medium,
   });
 
   useEffect(() => {
-    // Masque l'écran de démarrage une fois que les polices sont chargées (ou en cas d'erreur)
+    // Hide the splash screen once fonts are loaded (or on error)
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
-  // N'affiche rien tant que les polices ne sont pas prêtes
+  // Don't render anything until fonts are ready
   if (!fontsLoaded && !fontError) {
     return null;
   }
@@ -55,9 +51,9 @@ export default function RootLayout() {
         <AudioProvider>
           <LocationProvider>
             <SouffleProvider>
-              {/* Le Stack Navigator principal de l'application */}
+              {/* Main Stack Navigator for the application */}
               <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="_initial" />
+                <Stack.Screen name="index" />
                 <Stack.Screen name="(auth)" />
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="+not-found" />
