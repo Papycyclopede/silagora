@@ -6,13 +6,16 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
+// Declare the supabase variable at the top level
+let supabase: any;
+
 // On vérifie que les clés sont bien présentes et valides
 if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-ref.supabase.co' || supabaseAnonKey === 'your-anon-key-here') {
   console.warn("Les variables d'environnement Supabase ne sont pas configurées correctement.");
   console.warn("Veuillez configurer EXPO_PUBLIC_SUPABASE_URL et EXPO_PUBLIC_SUPABASE_ANON_KEY dans votre fichier .env");
   
   // Créer un client factice pour éviter les erreurs de compilation
-  export const supabase = {
+  supabase = {
     auth: {
       getSession: () => Promise.resolve({ data: { session: null }, error: null }),
       onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
@@ -31,11 +34,11 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-re
         eq: () => Promise.resolve({ error: new Error('Supabase non configuré') })
       })
     })
-  } as any;
+  };
 } else {
   // On crée et on exporte le client Supabase avec gestion d'erreur
   try {
-    export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         // On spécifie d'utiliser AsyncStorage pour que la session de l'utilisateur persiste
         // même après la fermeture de l'application.
@@ -48,7 +51,7 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-re
   } catch (error) {
     console.error('Erreur lors de la création du client Supabase:', error);
     // Créer un client factice en cas d'erreur
-    export const supabase = {
+    supabase = {
       auth: {
         getSession: () => Promise.resolve({ data: { session: null }, error: null }),
         onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
@@ -67,6 +70,9 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-re
           eq: () => Promise.resolve({ error: new Error('Erreur de configuration Supabase') })
         })
       })
-    } as any;
+    };
   }
 }
+
+// Export the supabase client at the top level
+export { supabase };
