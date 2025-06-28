@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'; // Ajouté useState
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAudio } from '@/contexts/AudioContext';
-import { View, Text, StyleSheet, Animated, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, Animated, ImageBackground, Platform } from 'react-native';
 
 export default function AppInitializer() { // Renommé de IndexScreen à AppInitializer pour plus de clarté
   const { isLoading: isAuthLoading } = useAuth();
@@ -55,7 +55,15 @@ export default function AppInitializer() { // Renommé de IndexScreen à AppInit
         // Après le premier setup, vous pourrez router directement vers (tabs)
         setInitializationStatus("Prêt pour l'envol !");
         console.log("Initialisation complète. Redirection vers /welcome...");
-        router.replace('/(auth)/welcome'); // Redirige toujours vers l'écran d'accueil pour la démo
+        
+        // Fix for web platform: defer navigation to avoid window undefined error
+        if (Platform.OS === 'web') {
+          setTimeout(() => {
+            router.replace('/(auth)/welcome');
+          }, 0);
+        } else {
+          router.replace('/(auth)/welcome'); // Redirige toujours vers l'écran d'accueil pour la démo
+        }
       } else {
         console.log(`Statuts de chargement: Auth=${!isAuthLoading}, Audio=${!isSoundLoading}`);
       }
