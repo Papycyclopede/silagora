@@ -1,8 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, Dimensions } from 'react-native';
 import { Sparkles } from 'lucide-react-native';
-import { Audio } from 'expo-av';
-import { Platform } from 'react-native';
 import { useAudio } from '@/contexts/AudioContext';
 
 const { width, height } = Dimensions.get('window');

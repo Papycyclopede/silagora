@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-// CORRECTION : Ajout de 'View' à la liste des imports
 import { Animated, Easing, View } from 'react-native';
 
 interface AnimatedHaloProps {
