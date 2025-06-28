@@ -45,6 +45,11 @@ export default function AppInitializer() { // Renommé de IndexScreen à AppInit
   // Logique de redirection principale
   useEffect(() => {
     const checkAndRedirect = async () => {
+      // Check if we're in a browser environment and router is ready
+      if (Platform.OS === 'web' && typeof window === 'undefined') {
+        return; // Don't proceed if window is not available
+      }
+
       // Pour la démo du hackathon, nous allons simplifier et toujours rediriger vers welcome
       // Si vous voulez la logique de "premier lancement", utilisez AsyncStorage ici.
       setInitializationStatus("Préparation des murmures...");
@@ -58,11 +63,22 @@ export default function AppInitializer() { // Renommé de IndexScreen à AppInit
         
         // Fix for web platform: defer navigation to avoid window undefined error
         if (Platform.OS === 'web') {
-          setTimeout(() => {
-            router.replace('/(auth)/welcome');
-          }, 0);
+          // Check if window is available before navigation
+          if (typeof window !== 'undefined') {
+            setTimeout(() => {
+              try {
+                router.replace('/(auth)/welcome');
+              } catch (error) {
+                console.error('Navigation error:', error);
+              }
+            }, 100);
+          }
         } else {
-          router.replace('/(auth)/welcome'); // Redirige toujours vers l'écran d'accueil pour la démo
+          try {
+            router.replace('/(auth)/welcome'); // Redirige toujours vers l'écran d'accueil pour la démo
+          } catch (error) {
+            console.error('Navigation error:', error);
+          }
         }
       } else {
         console.log(`Statuts de chargement: Auth=${!isAuthLoading}, Audio=${!isSoundLoading}`);
