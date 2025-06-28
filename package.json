@@ -14,11 +14,11 @@
     "preset": "jest-expo"
   },
   "dependencies": {
-    "@expo/vector-icons": "^14.0.4",
+    "@expo/vector-icons": "^14.0.0",
     "@react-native-async-storage/async-storage": "^1.23.1",
     "@react-navigation/native": "^6.0.2",
     "@supabase/supabase-js": "^2.39.3",
-    "expo": "~52.0.30",
+    "expo": "~53.0.0",
     "expo-av": "~15.0.1",
     "expo-camera": "~16.0.8",
     "expo-constants": "~17.0.3",
@@ -46,15 +46,17 @@
     "react-native-screens": "~4.1.0",
     "react-native-svg": "15.8.0",
     "react-native-url-polyfill": "^2.0.0",
-    "react-native-web": "~0.19.13"
+    "react-native-web": "~0.19.13",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/jest": "^29.5.12",
     "@types/react": "~18.2.45",
     "@types/react-test-renderer": "^18.0.7",
+    "@types/uuid": "^9.0.8",
     "jest": "^29.2.1",
-    "jest-expo": "~52.0.2",
+    "jest-expo": "~53.0.0",
     "react-test-renderer": "18.3.1",
     "typescript": "~5.3.3"
   },
