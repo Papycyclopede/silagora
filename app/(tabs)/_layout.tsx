@@ -43,16 +43,17 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="moderation"
-        options={{
-          title: 'Modération',
-          tabBarIcon: ({ size, color }) => (
-            <Shield size={size} color={color} />
-          ),
-          href: canModerate ? '/moderation' : null,
-        }}
-      />
+      {canModerate && (
+        <Tabs.Screen
+          name="moderation"
+          options={{
+            title: 'Modération',
+            tabBarIcon: ({ size, color }) => (
+              <Shield size={size} color={color} />
+            ),
+          }}
+        />
+      )}
       <Tabs.Screen
         name="about"
         options={{
