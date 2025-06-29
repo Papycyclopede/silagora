@@ -14,4 +14,7 @@ config.resolver.assetExts.push(
 // Ensure proper source extensions
 config.resolver.sourceExts.push('jsx', 'js', 'ts', 'tsx', 'json');
 
+// Fix for the callerCallsite error
+config.transformer.babelTransformerPath = require.resolve('metro-react-native-babel-transformer');
+
 module.exports = config;
