@@ -28,22 +28,21 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-re
         eq: () => ({
           single: () => Promise.resolve({ data: null, error: new Error('Supabase non configuré') })
         }),
-        is: () => Promise.resolve({ data: [], error: new Error('Supabase non configuré') })
+        is: () => Promise.resolve({ data: [], error: null })
       }),
       insert: () => Promise.resolve({ error: new Error('Supabase non configuré') }),
       update: () => ({
         eq: () => Promise.resolve({ error: new Error('Supabase non configuré') })
       })
     }),
-    rpc: () => Promise.resolve({ data: [], error: new Error('Supabase non configuré') }),
+    rpc: () => Promise.resolve({ data: null, error: new Error('Supabase non configuré') }),
     channel: () => ({
-      on: () => ({
-        subscribe: () => ({ unsubscribe: () => {} })
-      })
+      on: () => ({ subscribe: () => {} }),
+      subscribe: () => ({})
     }),
     removeChannel: () => {},
     functions: {
-      invoke: () => Promise.resolve({ error: new Error('Supabase non configuré') })
+      invoke: () => Promise.resolve({ data: null, error: null })
     }
   };
 } else {
@@ -75,22 +74,21 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-re
           eq: () => ({
             single: () => Promise.resolve({ data: null, error: new Error('Erreur de configuration Supabase') })
           }),
-          is: () => Promise.resolve({ data: [], error: new Error('Erreur de configuration Supabase') })
+          is: () => Promise.resolve({ data: [], error: null })
         }),
         insert: () => Promise.resolve({ error: new Error('Erreur de configuration Supabase') }),
         update: () => ({
           eq: () => Promise.resolve({ error: new Error('Erreur de configuration Supabase') })
         })
       }),
-      rpc: () => Promise.resolve({ data: [], error: new Error('Erreur de configuration Supabase') }),
+      rpc: () => Promise.resolve({ data: null, error: new Error('Erreur de configuration Supabase') }),
       channel: () => ({
-        on: () => ({
-          subscribe: () => ({ unsubscribe: () => {} })
-        })
+        on: () => ({ subscribe: () => {} }),
+        subscribe: () => ({})
       }),
       removeChannel: () => {},
       functions: {
-        invoke: () => Promise.resolve({ error: new Error('Erreur de configuration Supabase') })
+        invoke: () => Promise.resolve({ data: null, error: null })
       }
     };
   }
