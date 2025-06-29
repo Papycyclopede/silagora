@@ -10,9 +10,15 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 let supabase: any;
 
 // On vérifie que les clés sont bien présentes et valides
-if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-ref.supabase.co' || supabaseAnonKey === 'your-anon-key-here') {
+if (!supabaseUrl || !supabaseAnonKey || 
+    supabaseUrl === 'https://your-project-ref.supabase.co' || 
+    supabaseAnonKey === 'your-anon-key-here' ||
+    supabaseUrl === '' || 
+    supabaseAnonKey === '') {
   console.warn("Les variables d'environnement Supabase ne sont pas configurées correctement.");
   console.warn("Veuillez configurer EXPO_PUBLIC_SUPABASE_URL et EXPO_PUBLIC_SUPABASE_ANON_KEY dans votre fichier .env");
+  console.warn("URL actuelle:", supabaseUrl);
+  console.warn("Clé actuelle:", supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'vide');
   
   // Créer un client factice pour éviter les erreurs de compilation
   supabase = {
@@ -48,6 +54,11 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-re
 } else {
   // On crée et on exporte le client Supabase avec gestion d'erreur
   try {
+    console.log("Initialisation du client Supabase avec:", {
+      url: supabaseUrl,
+      key: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'vide'
+    });
+    
     supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         // On spécifie d'utiliser AsyncStorage pour que la session de l'utilisateur persiste
@@ -59,6 +70,8 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-re
         detectSessionInUrl: false,
       },
     });
+    
+    console.log("Client Supabase initialisé avec succès");
   } catch (error) {
     console.error('Erreur lors de la création du client Supabase:', error);
     // Créer un client factice en cas d'erreur

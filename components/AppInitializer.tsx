@@ -1,4 +1,4 @@
-// app/_initial.tsx
+// components/AppInitializer.tsx
 
 import 'react-native-reanimated';
 import React, { useEffect, useRef, useState } from 'react';
