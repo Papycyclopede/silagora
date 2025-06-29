@@ -19,6 +19,8 @@ const config = {
       },
     }),
   },
+  maxWorkers: 2, // Limit the number of workers to reduce memory usage
+  resetCache: true, // Force cache reset
 };
 
 module.exports = mergeConfig(defaultConfig, config);
