@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { v4 as uuidv4 } from 'uuid';
 import type { Souffle, CreateSouffleData, SuspendedTicket } from '@/types/souffle';
 import { useLocation } from './LocationContext';
 import { useAuth } from './AuthContext';
@@ -7,7 +9,6 @@ import { SouffleStorage } from '@/utils/storage';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { validateSouffleContent } from '@/utils/moderation';
 import { generateInitialSouffleBatch } from '@/utils/souffleSimulator';
-import { v4 as uuidv4 } from 'uuid';
 
 const MAX_SIMULATED_SOUFFLES = 20;
 
@@ -27,6 +28,10 @@ interface SouffleContextType {
 
 const SouffleContext = createContext<SouffleContextType | undefined>(undefined);
 
+// Storage keys
+const SOUFFLES_STORAGE_KEY = '@silagora:souffles';
+const TICKETS_STORAGE_KEY = '@silagora:tickets';
+
 export function SouffleProvider({ children }: { children: ReactNode }) {
   const [souffles, setSouffles] = useState<Souffle[]>([]);
   const [suspendedTickets, setSuspendedTickets] = useState<SuspendedTicket[]>([]);
@@ -36,7 +41,88 @@ export function SouffleProvider({ children }: { children: ReactNode }) {
   const { currentLanguage } = useLanguage();
   const { trackSouffleCreated, trackSouffleRevealed } = useAnalytics();
 
-  // Mock implementation that generates simulated data instead of fetching from Supabase
+  // Load saved data on startup
+  useEffect(() => {
+    const loadSavedData = async () => {
+      try {
+        setLoading(true);
+        
+        // Load souffles
+        const savedSouffles = await AsyncStorage.getItem(SOUFFLES_STORAGE_KEY);
+        if (savedSouffles) {
+          const parsedSouffles = JSON.parse(savedSouffles);
+          
+          // Convert string dates to Date objects
+          const processedSouffles = parsedSouffles.map((s: any) => ({
+            ...s,
+            createdAt: new Date(s.createdAt),
+            expiresAt: new Date(s.expiresAt),
+            moderation: {
+              ...s.moderation,
+              votes: s.moderation.votes.map((v: any) => ({
+                ...v,
+                timestamp: new Date(v.timestamp)
+              }))
+            }
+          }));
+          
+          setSouffles(processedSouffles);
+        }
+        
+        // Load tickets
+        const savedTickets = await AsyncStorage.getItem(TICKETS_STORAGE_KEY);
+        if (savedTickets) {
+          const parsedTickets = JSON.parse(savedTickets);
+          
+          // Convert string dates to Date objects
+          const processedTickets = parsedTickets.map((t: any) => ({
+            ...t,
+            createdAt: new Date(t.createdAt),
+            claimed_at: t.claimed_at ? new Date(t.claimed_at) : undefined
+          }));
+          
+          setSuspendedTickets(processedTickets);
+        }
+      } catch (e) {
+        console.error("Error loading saved data:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadSavedData();
+  }, []);
+
+  // Save data when it changes
+  useEffect(() => {
+    const saveSouffles = async () => {
+      try {
+        await AsyncStorage.setItem(SOUFFLES_STORAGE_KEY, JSON.stringify(souffles));
+      } catch (e) {
+        console.error("Error saving souffles:", e);
+      }
+    };
+    
+    if (souffles.length > 0) {
+      saveSouffles();
+    }
+  }, [souffles]);
+  
+  useEffect(() => {
+    const saveTickets = async () => {
+      try {
+        await AsyncStorage.setItem(TICKETS_STORAGE_KEY, JSON.stringify(suspendedTickets));
+      } catch (e) {
+        console.error("Error saving tickets:", e);
+      }
+    };
+    
+    if (suspendedTickets.length > 0) {
+      saveTickets();
+    }
+  }, [suspendedTickets]);
+
+  // Generate simulated data if needed
   const fetchData = useCallback(async () => {
     if (!location) return;
     setLoading(true);
@@ -55,7 +141,7 @@ export function SouffleProvider({ children }: { children: ReactNode }) {
         setSouffles(mappedSouffles);
       }
       
-      // Generate a few suspended tickets
+      // Generate a few suspended tickets if we don't have any
       if (suspendedTickets.length === 0) {
         const tickets: SuspendedTicket[] = Array(3).fill(0).map(() => {
           const randomAngle = Math.random() * 2 * Math.PI;
@@ -244,13 +330,16 @@ export function SouffleProvider({ children }: { children: ReactNode }) {
         return souffle;
       }));
     } catch (e) {
-      console.error(e);
+      console.error("Error submitting moderation vote:", e);
     }
   };
 
   const value = {
-    souffles, suspendedTickets, loading,
-    createSouffle, revealSouffle,
+    souffles, 
+    suspendedTickets, 
+    loading,
+    createSouffle, 
+    revealSouffle,
     refreshSouffles: fetchData,
     clearSimulatedSouffles,
     placeSuspendedTicket,
