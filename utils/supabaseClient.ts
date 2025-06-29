@@ -2,111 +2,44 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
-// On récupère les variables d'environnement avec des valeurs par défaut pour éviter les erreurs
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+// Création d'un client Supabase factice pour permettre à l'application de fonctionner sans backend
+console.warn("⚠️ SUPABASE DÉSACTIVÉ: Mode démo activé - aucune connexion à la base de données");
 
-// Declare the supabase variable at the top level
-let supabase: any;
-
-// On vérifie que les clés sont bien présentes et valides
-if (!supabaseUrl || !supabaseAnonKey || 
-    supabaseUrl === 'https://your-project-ref.supabase.co' || 
-    supabaseAnonKey === 'your-anon-key-here' ||
-    supabaseUrl === '' || 
-    supabaseAnonKey === '') {
-  console.warn("Les variables d'environnement Supabase ne sont pas configurées correctement.");
-  console.warn("Veuillez configurer EXPO_PUBLIC_SUPABASE_URL et EXPO_PUBLIC_SUPABASE_ANON_KEY dans votre fichier .env");
-  console.warn("URL actuelle:", supabaseUrl);
-  console.warn("Clé actuelle:", supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'vide');
-  
-  // Créer un client factice pour éviter les erreurs de compilation
-  supabase = {
-    auth: {
-      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-      signInWithOtp: () => Promise.resolve({ error: new Error('Supabase non configuré') }),
-      verifyOtp: () => Promise.resolve({ error: new Error('Supabase non configuré') }),
-      signOut: () => Promise.resolve({ error: null })
-    },
-    from: () => ({
-      select: () => ({
-        eq: () => ({
-          single: () => Promise.resolve({ data: null, error: new Error('Supabase non configuré') })
-        }),
-        is: () => Promise.resolve({ data: [], error: null })
+// Client Supabase factice qui simule toutes les méthodes nécessaires
+// mais ne fait aucune requête réelle à un backend
+const supabase = {
+  auth: {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    signInWithOtp: () => Promise.resolve({ error: null, data: { session: null } }),
+    verifyOtp: () => Promise.resolve({ error: null, data: { session: null, user: { id: 'demo-user-id' } } }),
+    signOut: () => Promise.resolve({ error: null })
+  },
+  from: (table: string) => ({
+    select: (columns?: string) => ({
+      eq: (column: string, value: any) => ({
+        single: () => Promise.resolve({ data: null, error: null })
       }),
-      insert: () => Promise.resolve({ error: new Error('Supabase non configuré') }),
-      update: () => ({
-        eq: () => Promise.resolve({ error: new Error('Supabase non configuré') })
+      is: (column: string, value: any) => Promise.resolve({ data: [], error: null }),
+      order: (column: string, options?: any) => ({
+        limit: (limit: number) => Promise.resolve({ data: [], error: null })
       })
     }),
-    rpc: () => Promise.resolve({ data: null, error: new Error('Supabase non configuré') }),
-    channel: () => ({
-      on: () => ({ subscribe: () => {} }),
-      subscribe: () => ({})
-    }),
-    removeChannel: () => {},
-    functions: {
-      invoke: () => Promise.resolve({ data: null, error: null })
-    }
-  };
-} else {
-  // On crée et on exporte le client Supabase avec gestion d'erreur
-  try {
-    console.log("Initialisation du client Supabase avec:", {
-      url: supabaseUrl,
-      key: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'vide'
-    });
-    
-    supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        // On spécifie d'utiliser AsyncStorage pour que la session de l'utilisateur persiste
-        // même après la fermeture de l'application.
-        // Only use AsyncStorage in browser environments to avoid "window is not defined" errors
-        storage: typeof window !== 'undefined' ? AsyncStorage : undefined,
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-      },
-    });
-    
-    console.log("Client Supabase initialisé avec succès");
-  } catch (error) {
-    console.error('Erreur lors de la création du client Supabase:', error);
-    // Créer un client factice en cas d'erreur
-    supabase = {
-      auth: {
-        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-        signInWithOtp: () => Promise.resolve({ error: new Error('Erreur de configuration Supabase') }),
-        verifyOtp: () => Promise.resolve({ error: new Error('Erreur de configuration Supabase') }),
-        signOut: () => Promise.resolve({ error: null })
-      },
-      from: () => ({
-        select: () => ({
-          eq: () => ({
-            single: () => Promise.resolve({ data: null, error: new Error('Erreur de configuration Supabase') })
-          }),
-          is: () => Promise.resolve({ data: [], error: null })
-        }),
-        insert: () => Promise.resolve({ error: new Error('Erreur de configuration Supabase') }),
-        update: () => ({
-          eq: () => Promise.resolve({ error: new Error('Erreur de configuration Supabase') })
-        })
-      }),
-      rpc: () => Promise.resolve({ data: null, error: new Error('Erreur de configuration Supabase') }),
-      channel: () => ({
-        on: () => ({ subscribe: () => {} }),
-        subscribe: () => ({})
-      }),
-      removeChannel: () => {},
-      functions: {
-        invoke: () => Promise.resolve({ data: null, error: null })
-      }
-    };
+    insert: (data: any) => Promise.resolve({ data: { id: 'demo-id' }, error: null }),
+    update: (data: any) => ({
+      eq: (column: string, value: any) => Promise.resolve({ error: null })
+    })
+  }),
+  rpc: (func: string, params?: any) => Promise.resolve({ data: [], error: null }),
+  channel: (name: string) => ({
+    on: (event: string, filter: any) => ({ subscribe: (callback: Function) => {} }),
+    subscribe: (callback?: Function) => ({})
+  }),
+  removeChannel: (channel: any) => {},
+  functions: {
+    invoke: (name: string, params?: any) => Promise.resolve({ data: null, error: null })
   }
-}
+};
 
-// Export the supabase client at the top level
+// Export le client Supabase factice
 export { supabase };
