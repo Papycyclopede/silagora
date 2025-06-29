@@ -27,13 +27,24 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-re
       select: () => ({
         eq: () => ({
           single: () => Promise.resolve({ data: null, error: new Error('Supabase non configuré') })
-        })
+        }),
+        is: () => Promise.resolve({ data: [], error: new Error('Supabase non configuré') })
       }),
       insert: () => Promise.resolve({ error: new Error('Supabase non configuré') }),
       update: () => ({
         eq: () => Promise.resolve({ error: new Error('Supabase non configuré') })
       })
-    })
+    }),
+    rpc: () => Promise.resolve({ data: [], error: new Error('Supabase non configuré') }),
+    channel: () => ({
+      on: () => ({
+        subscribe: () => ({ unsubscribe: () => {} })
+      })
+    }),
+    removeChannel: () => {},
+    functions: {
+      invoke: () => Promise.resolve({ error: new Error('Supabase non configuré') })
+    }
   };
 } else {
   // On crée et on exporte le client Supabase avec gestion d'erreur
@@ -63,13 +74,24 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-re
         select: () => ({
           eq: () => ({
             single: () => Promise.resolve({ data: null, error: new Error('Erreur de configuration Supabase') })
-          })
+          }),
+          is: () => Promise.resolve({ data: [], error: new Error('Erreur de configuration Supabase') })
         }),
         insert: () => Promise.resolve({ error: new Error('Erreur de configuration Supabase') }),
         update: () => ({
           eq: () => Promise.resolve({ error: new Error('Erreur de configuration Supabase') })
         })
-      })
+      }),
+      rpc: () => Promise.resolve({ data: [], error: new Error('Erreur de configuration Supabase') }),
+      channel: () => ({
+        on: () => ({
+          subscribe: () => ({ unsubscribe: () => {} })
+        })
+      }),
+      removeChannel: () => {},
+      functions: {
+        invoke: () => Promise.resolve({ error: new Error('Erreur de configuration Supabase') })
+      }
     };
   }
 }
