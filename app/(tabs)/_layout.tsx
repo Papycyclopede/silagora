@@ -43,17 +43,16 @@ export default function TabLayout() {
           ),
         }}
       />
-      {canModerate && (
-        <Tabs.Screen
-          name="moderation"
-          options={{
-            title: 'Modération',
-            tabBarIcon: ({ size, color }) => (
-              <Shield size={size} color={color} />
-            ),
-          }}
-        />
-      )}
+      <Tabs.Screen
+        name="moderation"
+        options={{
+          title: 'Modération',
+          tabBarIcon: ({ size, color }) => (
+            <Shield size={size} color={color} />
+          ),
+          href: canModerate ? '/moderation' : null,
+        }}
+      />
       <Tabs.Screen
         name="about"
         options={{
@@ -66,13 +65,13 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          href: null, // Hide this tab
+          href: null,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          href: null, // Hide this tab
+          href: null,
         }}
       />
     </Tabs>
