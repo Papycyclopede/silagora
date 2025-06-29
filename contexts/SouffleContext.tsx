@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { supabase } from '@/utils/supabaseClient';
 import type { Souffle, CreateSouffleData, SuspendedTicket } from '@/types/souffle';
 import { useLocation } from './LocationContext';
 import { useAuth } from './AuthContext';
@@ -8,6 +7,7 @@ import { SouffleStorage } from '@/utils/storage';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { validateSouffleContent } from '@/utils/moderation';
 import { generateInitialSouffleBatch } from '@/utils/souffleSimulator';
+import { v4 as uuidv4 } from 'uuid';
 
 const MAX_SIMULATED_SOUFFLES = 20;
 
@@ -30,92 +30,58 @@ const SouffleContext = createContext<SouffleContextType | undefined>(undefined);
 export function SouffleProvider({ children }: { children: ReactNode }) {
   const [souffles, setSouffles] = useState<Souffle[]>([]);
   const [suspendedTickets, setSuspendedTickets] = useState<SuspendedTicket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const { location } = useLocation();
   const { user, addPremiumCredit } = useAuth();
   const { currentLanguage } = useLanguage();
   const { trackSouffleCreated, trackSouffleRevealed } = useAnalytics();
 
-  const fetchData = useCallback(async (isRecursiveCall = false) => {
+  // Mock implementation that generates simulated data instead of fetching from Supabase
+  const fetchData = useCallback(async () => {
     if (!location) return;
-    if (!isRecursiveCall) setLoading(true);
+    setLoading(true);
 
     try {
-      // Vérifier si la table souffles existe
-      try {
-        const { data: soufflesData, error: soufflesError } = await supabase.rpc('get_souffles_in_view', {
-          lat: location.latitude,
-          long: location.longitude,
-          radius_meters: 10000
-        });
-
-        if (soufflesError) {
-          console.error("Erreur lors de la récupération des données:", soufflesError.message);
-          // Si la table n'existe pas, on retourne un tableau vide
-          if (soufflesError.message.includes("relation") && soufflesError.message.includes("does not exist")) {
-            setSouffles([]);
-          } else {
-            throw soufflesError;
-          }
-        } else {
-          const revealedIds = await SouffleStorage.loadRevealedSouffles();
-
-          const mappedSouffles: Souffle[] = (soufflesData || [])
-            .filter((item: any) => item && item.id && item.created_at && item.expires_at)
-            .map((item: any) => ({
-              id: item.id,
-              userId: item.user_id,
-              pseudo: item.pseudo,
-              content: item.content || { jeMeSens: '', messageLibre: '', ceQueJaimerais: '' },
-              latitude: item.latitude,
-              longitude: item.longitude,
-              createdAt: new Date(item.created_at),
-              expiresAt: new Date(item.expires_at),
-              isRevealed: revealedIds.includes(item.id) || item.user_id === user?.id,
-              sticker: item.sticker,
-              backgroundId: item.background_id,
-              isSimulated: item.is_simulated || false,
-              moderation: item.moderation || { status: 'clean', votes: [] },
-              language_code: item.language_code,
-              voice_id: item.voice_id,
-              audio_url: item.audio_url,
-            }));
+      // Generate simulated souffles if we don't have any yet
+      if (souffles.length === 0) {
+        const simulatedSouffles = generateInitialSouffleBatch(location, 10);
+        const revealedIds = await SouffleStorage.loadRevealedSouffles();
+        
+        const mappedSouffles = simulatedSouffles.map(souffle => ({
+          ...souffle,
+          isRevealed: revealedIds.includes(souffle.id) || (user && souffle.userId === user.id)
+        }));
+        
+        setSouffles(mappedSouffles);
+      }
+      
+      // Generate a few suspended tickets
+      if (suspendedTickets.length === 0) {
+        const tickets: SuspendedTicket[] = Array(3).fill(0).map(() => {
+          const randomAngle = Math.random() * 2 * Math.PI;
+          const randomDistance = 100 + Math.random() * 400;
+          const latOffset = (randomDistance / 111111) * Math.cos(randomAngle);
+          const lonOffset = (randomDistance / (111111 * Math.cos(location.latitude * Math.PI / 180))) * Math.sin(randomAngle);
           
-          setSouffles(mappedSouffles);
-        }
-      } catch (e) {
-        console.error("Erreur lors de la récupération des souffles:", e);
-        setSouffles([]);
+          return {
+            id: uuidv4(),
+            latitude: location.latitude + latOffset,
+            longitude: location.longitude + lonOffset,
+            createdAt: new Date()
+          };
+        });
+        
+        setSuspendedTickets(tickets);
       }
-
-      try {
-        const { data: ticketsData, error: ticketsError } = await supabase.from('suspended_tickets').select('*').is('claimed_by', null);
-        if (ticketsError) {
-          console.error("Erreur lors de la récupération des tickets:", ticketsError.message);
-          // Si la table n'existe pas, on retourne un tableau vide
-          if (ticketsError.message.includes("relation") && ticketsError.message.includes("does not exist")) {
-            setSuspendedTickets([]);
-          } else {
-            throw ticketsError;
-          }
-        } else {
-          setSuspendedTickets(ticketsData || []);
-        }
-      } catch (e) {
-        console.error("Erreur lors de la récupération des tickets:", e);
-        setSuspendedTickets([]);
-      }
-
     } catch (e: any) {
-      console.error("Erreur générale lors de la récupération des données:", e.message);
+      console.error("Error generating simulated data:", e.message);
     } finally {
-      if (!isRecursiveCall) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
-  }, [location, user?.id]);
+  }, [location, user?.id, souffles.length, suspendedTickets.length]);
 
-  const addSingleSimulatedSouffle = async () => {
+  // Add a single simulated souffle occasionally
+  const addSingleSimulatedSouffle = useCallback(() => {
     if (!location) return;
 
     const currentSimulatedCount = souffles.filter(s => s.isSimulated).length;
@@ -124,27 +90,12 @@ export function SouffleProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const souffle = generateInitialSouffleBatch(location, 1)[0];
-      const souffleData = {
-          id_data: souffle.id,
-          content_data: souffle.content,
-          latitude_data: souffle.latitude,
-          longitude_data: souffle.longitude,
-          created_at_data: souffle.createdAt.toISOString(),
-          expires_at_data: souffle.expiresAt.toISOString(),
-          is_flagged_data: souffle.moderation.status === 'pending',
-      };
-
-      const { error } = await supabase.rpc('create_single_simulated_souffle', souffleData);
-      if (error) {
-        console.error("Erreur lors de l'ajout d'un souffle simulé:", error.message);
-      } else {
-        fetchData(true);
-      }
+      const newSouffle = generateInitialSouffleBatch(location, 1)[0];
+      setSouffles(prev => [...prev, newSouffle]);
     } catch (e: any) {
-      console.error("Erreur lors de la simulation de souffle:", e.message);
+      console.error("Error adding simulated souffle:", e.message);
     }
-  };
+  }, [location, souffles]);
 
   useEffect(() => {
     if (location) {
@@ -155,33 +106,18 @@ export function SouffleProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const simulationInterval = setInterval(() => {
       addSingleSimulatedSouffle();
-    }, 120000);
+    }, 120000); // Add a new souffle every 2 minutes
 
     return () => clearInterval(simulationInterval);
-  }, [location, souffles]);
-
-  useEffect(() => {
-    try {
-      const souffleChannel = supabase.channel('souffles_realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'souffles' }, () => fetchData(true)).subscribe();
-      const ticketChannel = supabase.channel('tickets_realtime').on('postgres_changes', { event: '*', schema: 'public', table: 'suspended_tickets' }, () => fetchData(true)).subscribe();
-      
-      return () => {
-        supabase.removeChannel(souffleChannel);
-        supabase.removeChannel(ticketChannel);
-      };
-    } catch (error) {
-      console.error("Erreur lors de la configuration des canaux Supabase:", error);
-      return () => {};
-    }
-  }, [fetchData]);
+  }, [location, addSingleSimulatedSouffle]);
 
   const createSouffle = async (data: CreateSouffleData): Promise<{ success: boolean; error?: string }> => {
     if (!location || !user) {
-      return { success: false, error: "Utilisateur ou localisation introuvable." };
+      return { success: false, error: "User or location not found." };
     }
 
     if (user.isMaster) {
-      console.log("Mode Maître : Création de souffle désactivée.");
+      console.log("Master mode: Souffle creation disabled.");
       return { success: true };
     }
 
@@ -191,15 +127,19 @@ export function SouffleProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const newSouffleData = {
-        user_id: user.id,
+      const newSouffle: Souffle = {
+        id: uuidv4(),
+        userId: user.id,
+        pseudo: user.pseudo || 'Anonymous',
         content: validationResult.sanitizedContent ? JSON.parse(validationResult.sanitizedContent) : data.content,
         latitude: location.latitude,
         longitude: location.longitude,
-        expires_at: new Date(Date.now() + data.duration * 60 * 60 * 1000).toISOString(),
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + data.duration * 60 * 60 * 1000),
+        isRevealed: true, // User's own souffles are always revealed
         sticker: data.sticker,
-        background_id: data.backgroundId,
-        is_simulated: false,
+        backgroundId: data.backgroundId,
+        isSimulated: false,
         moderation: {
           status: validationResult.status === 'flagged' ? 'pending' : 'clean',
           votes: [],
@@ -208,22 +148,11 @@ export function SouffleProvider({ children }: { children: ReactNode }) {
         voice_id: data.voiceId,
       };
 
-      const { data: insertedData, error } = await supabase
-        .from('souffles')
-        .insert(newSouffleData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Erreur d'insertion Supabase:", error);
-        return { success: false, error: error.message };
-      }
-
-      await fetchData(true);
+      setSouffles(prev => [...prev, newSouffle]);
       trackSouffleCreated();
       return { success: true };
     } catch (error: any) {
-      console.error("Erreur lors de la création du souffle:", error);
+      console.error("Error creating souffle:", error);
       return { success: false, error: error.message };
     }
   };
@@ -241,15 +170,9 @@ export function SouffleProvider({ children }: { children: ReactNode }) {
   const clearSimulatedSouffles = async (): Promise<void> => {
     setLoading(true);
     try {
-      const { error } = await supabase.rpc('clear_all_simulated_souffles');
-      if (error) {
-        console.error("Erreur lors du nettoyage des souffles simulés:", error.message);
-        throw error;
-      }
-      
-      await fetchData();
+      setSouffles(prev => prev.filter(s => !s.isSimulated));
     } catch (e: any) {
-      console.error("Erreur lors du nettoyage des souffles simulés:", e.message);
+      console.error("Error clearing simulated souffles:", e.message);
     } finally {
       setLoading(false);
     }
@@ -258,10 +181,15 @@ export function SouffleProvider({ children }: { children: ReactNode }) {
   const placeSuspendedTicket = async (): Promise<void> => {
     if (!location || !user || user.isMaster) return;
     try {
-      const { error } = await supabase.from('suspended_tickets').insert({ latitude: location.latitude, longitude: location.longitude });
-      if (error) console.error("Erreur lors du dépôt du ticket:", error);
+      const newTicket: SuspendedTicket = {
+        id: uuidv4(),
+        latitude: location.latitude,
+        longitude: location.longitude,
+        createdAt: new Date()
+      };
+      setSuspendedTickets(prev => [...prev, newTicket]);
     } catch (error) {
-      console.error("Erreur lors du dépôt du ticket:", error);
+      console.error("Error placing suspended ticket:", error);
     }
   };
 
@@ -272,39 +200,49 @@ export function SouffleProvider({ children }: { children: ReactNode }) {
       return true;
     }
     try {
-      const { error } = await supabase.from('suspended_tickets').update({ claimed_by: user.id, claimed_at: new Date().toISOString() }).eq('id', ticketId);
-      if (error) {
-        console.error("Erreur lors de la réclamation du ticket:", error);
-        return false;
-      }
+      setSuspendedTickets(prev => prev.map(t => 
+        t.id === ticketId ? { ...t, claimed_by: user.id, claimed_at: new Date() } : t
+      ));
       await addPremiumCredit();
       return true;
     } catch (error) {
-      console.error("Erreur lors de la réclamation du ticket:", error);
+      console.error("Error claiming ticket:", error);
       return false;
     }
   };
 
   const reportSouffle = async (souffleId: string): Promise<{ success: boolean; error?: string }> => {
-    if (!user) return { success: false, error: "Utilisateur non authentifié." };
+    if (!user) return { success: false, error: "User not logged in." };
     try {
-      const { error } = await supabase.rpc('report_souffle', { souffle_id_to_report: souffleId });
-      if (error) throw error;
+      // Remove the reported souffle from the list
       setSouffles(prevSouffles => prevSouffles.filter(s => s.id !== souffleId));
       return { success: true };
     } catch (e: any) {
-      console.error("Erreur lors du signalement du souffle:", e.message);
+      console.error("Error reporting souffle:", e.message);
       return { success: false, error: e.message };
     }
   };
 
   const submitModerationVote = async (souffleId: string, userId: string, decision: 'approve' | 'reject') => {
     try {
-      const { error } = await supabase.rpc('submit_moderation_vote', { souffle_id: souffleId, voter_id: userId, vote_decision: decision });
-      if (error) {
-        throw new Error(`Erreur lors du vote de modération: ${error.message}`);
-      }
-      await fetchData(true);
+      setSouffles(prev => prev.map(souffle => {
+        if (souffle.id === souffleId) {
+          const updatedVotes = [
+            ...souffle.moderation.votes,
+            { userId, decision, timestamp: new Date() }
+          ];
+          
+          return {
+            ...souffle,
+            moderation: {
+              ...souffle.moderation,
+              votes: updatedVotes,
+              status: decision === 'approve' ? 'approved' : 'rejected'
+            }
+          };
+        }
+        return souffle;
+      }));
     } catch (e) {
       console.error(e);
     }
@@ -326,6 +264,6 @@ export function SouffleProvider({ children }: { children: ReactNode }) {
 
 export function useSouffle() {
   const context = useContext(SouffleContext);
-  if (context === undefined) throw new Error('useSouffle doit être utilisé à l\'intérieur d\'un SouffleProvider');
+  if (context === undefined) throw new Error('useSouffle must be used inside a SouffleProvider');
   return context;
 }

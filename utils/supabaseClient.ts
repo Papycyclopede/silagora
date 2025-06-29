@@ -1,13 +1,11 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createClient } from '@supabase/supabase-js';
 
-// Création d'un client Supabase factice pour permettre à l'application de fonctionner sans backend
-console.warn("⚠️ SUPABASE DÉSACTIVÉ: Mode démo activé - aucune connexion à la base de données");
+// Create a mock Supabase client that doesn't connect to any real backend
+console.log("Supabase disconnected: Using mock implementation");
 
-// Client Supabase factice qui simule toutes les méthodes nécessaires
-// mais ne fait aucune requête réelle à un backend
-const supabase = {
+// Mock client with all the methods used in the app
+export const supabase = {
   auth: {
     getSession: () => Promise.resolve({ data: { session: null }, error: null }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
@@ -40,6 +38,3 @@ const supabase = {
     invoke: (name: string, params?: any) => Promise.resolve({ data: null, error: null })
   }
 };
-
-// Export le client Supabase factice
-export { supabase };
