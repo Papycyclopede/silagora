@@ -1,5 +1,4 @@
-// app/index.tsx
-import React, { useEffect, useRef, useState } from 'react'; 
+import React, { useEffect, useState } from 'react'; 
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAudio } from '@/contexts/AudioContext';
@@ -10,30 +9,6 @@ export default function AppInitializer() {
   const { isSoundLoading } = useAudio();
 
   const [initializationStatus, setInitializationStatus] = useState("Démarrage...");
-
-  const dot1Opacity = useRef(new Animated.Value(0.3)).current;
-  const dot2Opacity = useRef(new Animated.Value(0.3)).current;
-  const dot3Opacity = useRef(new Animated.Value(0.3)).current;
-
-  // Animation des points
-  useEffect(() => {
-    const waveAnimation = (dot: Animated.Value) =>
-      Animated.sequence([
-        Animated.timing(dot, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(dot, { toValue: 0.3, duration: 500, useNativeDriver: true }),
-      ]);
-
-    const loop = Animated.loop(
-      Animated.stagger(250, [
-        waveAnimation(dot1Opacity),
-        waveAnimation(dot2Opacity),
-        waveAnimation(dot3Opacity),
-      ])
-    );
-    loop.start();
-    
-    return () => loop.stop();
-  }, []);
 
   // Logique de redirection principale
   useEffect(() => {
@@ -88,11 +63,6 @@ export default function AppInitializer() {
         </View>
         
         <View style={styles.statusContainer}>
-          <View style={styles.loadingContainer}>
-            <Animated.View style={[styles.loadingDot, { opacity: dot1Opacity }]} />
-            <Animated.View style={[styles.loadingDot, { opacity: dot2Opacity }]} />
-            <Animated.View style={[styles.loadingDot, { opacity: dot3Opacity }]} />
-          </View>
           <Text style={styles.loadingText}>{initializationStatus}</Text>
         </View>
       </View>
@@ -119,7 +89,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 84,
-    fontFamily: 'Satisfy-Regular',
+    fontFamily: 'Georgia',
     color: '#687fb2',
     letterSpacing: 2,
     marginBottom: 10,
@@ -127,7 +97,7 @@ const styles = StyleSheet.create({
   },
   etymology: {
     fontSize: 12,
-    fontFamily: 'Quicksand-Light',
+    fontFamily: 'Georgia',
     color: '#8B7355',
     fontStyle: 'italic',
     textAlign: 'center',
@@ -139,21 +109,9 @@ const styles = StyleSheet.create({
     bottom: 80,
     alignItems: 'center',
   },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  loadingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#8B7355',
-    marginHorizontal: 4,
-  },
   loadingText: {
     fontSize: 14,
-    fontFamily: 'Quicksand-Light',
+    fontFamily: 'Georgia',
     color: '#8B7355',
     fontStyle: 'italic',
   },

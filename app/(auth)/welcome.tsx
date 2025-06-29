@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ImageBackground
 } from 'react-native';
 import { router } from 'expo-router';
@@ -35,8 +34,6 @@ export default function WelcomeScreen() {
       // La connexion est réussie, l'écouteur `onAuthStateChange` s'occupera du reste.
       // On redirige simplement vers l'application principale.
       router.replace('/(tabs)');
-    } else {
-      Alert.alert(t('error'), result.error || t('unexpectedError'));
     }
   };
 
@@ -52,7 +49,6 @@ export default function WelcomeScreen() {
   
   const handleLanguageSelect = async (lang: string) => {
     await changeLanguage(lang);
-    Alert.alert(t('welcome.languageChangedTitle'), t('welcome.languageChangedMessage', { lang: lang === 'fr' ? 'Français' : 'English' }));
   };
 
   return (
@@ -121,25 +117,25 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'rgba(249, 245, 240, 0.75)', },
   content: { flex: 1, paddingHorizontal: 24, },
   header: { alignItems: 'center', paddingTop: 80, paddingBottom: 20, },
-  title: { fontSize: 64, fontFamily: 'Satisfy-Regular', color: '#687fb2', textShadowColor: 'rgba(0, 0, 0, 0.1)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4, marginBottom: 5, },
-  etymology: { fontSize: 13, fontFamily: 'Quicksand-Light', fontStyle: 'italic', color: '#8B7355', marginTop: -5, paddingHorizontal: 20, textAlign: 'center', },
+  title: { fontSize: 64, fontFamily: 'Georgia', color: '#687fb2', textShadowColor: 'rgba(0, 0, 0, 0.1)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4, marginBottom: 5, },
+  etymology: { fontSize: 13, fontFamily: 'Georgia', fontStyle: 'italic', color: '#8B7355', marginTop: -5, paddingHorizontal: 20, textAlign: 'center', },
   introSection: { backgroundColor: 'rgba(255, 255, 255, 0.6)', borderRadius: 16, padding: 20, marginVertical: 30, },
-  introText: { fontSize: 16, fontFamily: 'Quicksand-Regular', color: '#4D3B2F', textAlign: 'center', lineHeight: 24, fontStyle: 'italic', },
+  introText: { fontSize: 16, fontFamily: 'Georgia', color: '#4D3B2F', textAlign: 'center', lineHeight: 24, fontStyle: 'italic', },
   featuresSection: { marginBottom: 40, },
   featureCard: { flexDirection: 'row', alignItems: 'center', marginBottom: 25, },
   featureIconContainer: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginRight: 20, },
   featureContent: { flex: 1, },
-  featureTitle: { fontSize: 17, fontFamily: 'Quicksand-Medium', color: '#4D3B2F', marginBottom: 4, },
-  featureDescription: { fontSize: 14, fontFamily: 'Quicksand-Regular', color: '#8B7355', lineHeight: 20, },
+  featureTitle: { fontSize: 17, fontFamily: 'Georgia', color: '#4D3B2F', marginBottom: 4, },
+  featureDescription: { fontSize: 14, fontFamily: 'Georgia', color: '#8B7355', lineHeight: 20, },
   actionSection: { paddingHorizontal: 24, paddingVertical: 25, paddingBottom: 40, backgroundColor: 'transparent', },
   primaryButton: { backgroundColor: '#687fb2', paddingVertical: 18, borderRadius: 30, alignItems: 'center', marginBottom: 15, shadowColor: '#687fb2', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8, },
-  primaryButtonText: { fontSize: 16, fontFamily: 'Quicksand-Medium', color: '#F9F5F0', letterSpacing: 0.8, },
+  primaryButtonText: { fontSize: 16, fontFamily: 'Georgia', color: '#F9F5F0', letterSpacing: 0.8, },
   secondaryButton: { backgroundColor: 'transparent', paddingVertical: 18, borderRadius: 30, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(104, 127, 178, 0.5)', },
-  secondaryButtonText: { fontSize: 14, fontFamily: 'Quicksand-Medium', color: '#687fb2', letterSpacing: 0.5, },
+  secondaryButtonText: { fontSize: 14, fontFamily: 'Georgia', color: '#687fb2', letterSpacing: 0.5, },
   masterButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginBottom: 25, backgroundColor: 'rgba(255, 223, 0, 0.2)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(218, 165, 32, 0.4)', },
-  masterButtonText: { fontSize: 13, fontFamily: 'Quicksand-Medium', color: '#4D3B2F', marginLeft: 8, },
+  masterButtonText: { fontSize: 13, fontFamily: 'Georgia', color: '#4D3B2F', marginLeft: 8, },
   bottomLinks: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingTop: 20, },
   languageButton: { paddingHorizontal: 8, },
-  bottomLinkText: { fontSize: 12, fontFamily: 'Quicksand-Regular', color: '#8B7355', textDecorationLine: 'underline', },
+  bottomLinkText: { fontSize: 12, fontFamily: 'Georgia', color: '#8B7355', textDecorationLine: 'underline', },
   bottomLinkSeparator: { fontSize: 12, color: '#8B7355', marginHorizontal: 8, },
 });
