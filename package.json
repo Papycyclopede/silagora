@@ -3,11 +3,11 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start --clear",
-    "dev": "expo start --clear",
-    "android": "expo start --android --clear",
-    "ios": "expo start --ios --clear",
-    "web": "expo start --web --clear",
+    "start": "npx expo start --clear",
+    "dev": "npx expo start --clear",
+    "android": "npx expo start --android --clear",
+    "ios": "npx expo start --ios --clear",
+    "web": "npx expo start --web --clear",
     "test": "jest --watchAll"
   },
   "jest": {
