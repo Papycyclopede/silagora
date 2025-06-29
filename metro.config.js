@@ -17,4 +17,10 @@ config.resolver.sourceExts.push('jsx', 'js', 'ts', 'tsx', 'json');
 // Fix for the callerCallsite error
 config.transformer.babelTransformerPath = require.resolve('metro-react-native-babel-transformer');
 
+// Disable the use of the haste resolver
+config.resolver.useWatchman = false;
+
+// Disable the use of the haste map
+config.resolver.hasteImplModulePath = null;
+
 module.exports = config;
