@@ -52,7 +52,8 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl === 'https://your-project-re
       auth: {
         // On spécifie d'utiliser AsyncStorage pour que la session de l'utilisateur persiste
         // même après la fermeture de l'application.
-        storage: AsyncStorage,
+        // Only use AsyncStorage in browser environments to avoid "window is not defined" errors
+        storage: typeof window !== 'undefined' ? AsyncStorage : undefined,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
