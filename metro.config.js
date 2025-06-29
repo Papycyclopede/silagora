@@ -1,26 +1,24 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const { mergeConfig } = require('@react-native/metro-config');
 
-const config = getDefaultConfig(__dirname);
+const defaultConfig = getDefaultConfig(__dirname);
+const { resolver } = defaultConfig;
 
-// Ensure we're only targeting mobile platforms
-config.resolver.platforms = ['ios', 'android', 'web'];
+const config = {
+  resolver: {
+    ...resolver,
+    sourceExts: [...resolver.sourceExts, 'mjs', 'cjs'],
+    platforms: ['ios', 'android', 'web'],
+    assetExts: [...resolver.assetExts, 'db', 'mp3', 'ttf', 'obj', 'png', 'jpg'],
+  },
+  transformer: {
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
+  },
+};
 
-// Add support for additional asset extensions if needed
-config.resolver.assetExts.push(
-  // Add any additional asset extensions your project uses
-  'db', 'mp3', 'ttf', 'obj', 'png', 'jpg'
-);
-
-// Ensure proper source extensions
-config.resolver.sourceExts.push('jsx', 'js', 'ts', 'tsx', 'json');
-
-// Fix for the callerCallsite error
-config.transformer.babelTransformerPath = require.resolve('metro-react-native-babel-transformer');
-
-// Disable the use of the haste resolver
-config.resolver.useWatchman = false;
-
-// Disable the use of the haste map
-config.resolver.hasteImplModulePath = null;
-
-module.exports = config;
+module.exports = mergeConfig(defaultConfig, config);
