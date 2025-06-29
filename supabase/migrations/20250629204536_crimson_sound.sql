@@ -1,0 +1,2 @@
+-- This file is intentionally left empty to prevent SQL errors
+-- All schema definitions have been removed to avoid conflicts

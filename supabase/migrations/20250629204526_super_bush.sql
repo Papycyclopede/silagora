@@ -1,0 +1,2 @@
+-- This file is intentionally left empty to prevent SQL errors
+-- The original function has been removed to avoid conflicts
